@@ -6,4 +6,4 @@
 
 - 브랜치 만들기
 - 변경 사항 커밋하기
-- Pull Requst 열고 머지하기
+- Pull Request 열고 머지하기
