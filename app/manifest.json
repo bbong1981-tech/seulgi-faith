@@ -1,0 +1,105 @@
+{
+  "name": "슬기로운 신앙생활",
+  "short_name": "슬기로운 신앙생활",
+  "description": "개역한글·KJV 성경, 성경읽기표, 단어사전, 기도노트, 교회 일정 알림",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4ebdf",
+  "theme_color": "#f4ebdf",
+  "icons": [
+    {
+      "src": "icons/icon-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/app-icon-v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "성경 읽기",
+      "short_name": "성경",
+      "url": "./?tab=bible",
+      "icons": [
+        {
+          "src": "icons/shortcut-bible-v2.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "오늘의 성경 읽기표",
+      "short_name": "읽기표",
+      "url": "./?tab=plan",
+      "icons": [
+        {
+          "src": "icons/shortcut-plan-v2.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "기도 노트",
+      "short_name": "기도",
+      "url": "./?tab=prayer",
+      "icons": [
+        {
+          "src": "icons/shortcut-prayer-v2.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "찬양",
+      "short_name": "찬양",
+      "url": "./?tab=hymn",
+      "icons": [
+        {
+          "src": "icons/shortcut-hymn-v2.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "교회 일정",
+      "short_name": "일정",
+      "url": "./?tab=events",
+      "icons": [
+        {
+          "src": "icons/shortcut-events-v2.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
