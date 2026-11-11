@@ -1,0 +1,4 @@
+# Netlify를 이 GitHub 저장소와 연결하면 app 폴더를 그대로 올립니다 (빌드 과정 없음).
+[build]
+  publish = "app"
+  command = ""

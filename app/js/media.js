@@ -16,17 +16,31 @@ S.sermonType = "all";
 
 const feedWaiters = {}, feedCache = {};
 window.FEED_LOAD = (name, data) => { feedWaiters[name]?.(data); };
-function loadFeed(name, fresh) {
-  if (feedCache[name] && !fresh) return feedCache[name];
-  return feedCache[name] = new Promise((res, rej) => {
+// 목록은 GitHub Pages에서 1시간마다 갱신되므로, 앱을 어디에 올렸든(Netlify 등) 그곳에서 먼저 받아 옴.
+// <script>로 불러오면 다른 주소의 파일도 받을 수 있음. 실패하면(인터넷 없음 등) 앱과 함께 올린 feeds/ 사용.
+const FEED_BASES = ["https://bbong1981-tech.github.io/seulgi-faith/feeds/", "feeds/"];
+function loadFeedFrom(base, name) {
+  return new Promise((res, rej) => {
     let done = false;
     feedWaiters[name] = d => { done = true; res(d); };
     const s = document.createElement("script");
-    s.src = `feeds/${name}.js?t=${Math.floor(Date.now() / 60000)}`; // 1분 단위로 새로 받음
+    s.src = `${base}${name}.js?t=${Math.floor(Date.now() / 60000)}`; // 1분 단위로 새로 받음
     s.onload = () => { s.remove(); if (!done) rej(new Error("empty")); };
-    s.onerror = () => { s.remove(); delete feedCache[name]; rej(new Error("load")); };
+    s.onerror = () => { s.remove(); rej(new Error("load")); };
     document.head.appendChild(s);
   });
+}
+function loadFeed(name, fresh) {
+  if (feedCache[name] && !fresh) return feedCache[name];
+  return feedCache[name] = (async () => {
+    let last;
+    for (const base of FEED_BASES) {
+      try { const d = await loadFeedFrom(base, name); if (d?.items?.length || base === FEED_BASES[FEED_BASES.length - 1]) return d; }
+      catch (e) { last = e; }
+    }
+    delete feedCache[name];
+    throw last || new Error("load");
+  })();
 }
 const fmtFeedDate = iso => { const d = new Date(iso); return isNaN(d) ? "" : `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}. (${DOW[d.getDay()]})`; };
 function agoText(iso) {
