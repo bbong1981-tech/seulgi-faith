@@ -92,8 +92,9 @@ async function updateSermons() {
   try {
     const id = await channelId();
     let videos = await fetchRssVideos(id);
+    console.log(`YouTube RSS: 최신 영상 ${videos.length}개${process.env.YT_API_KEY ? "" : " (API 키 없음)"}`);
     if (process.env.YT_API_KEY) {
-      try { videos = videos.concat(await fetchApiVideos(id, process.env.YT_API_KEY)); }
+      try { const api = await fetchApiVideos(id, process.env.YT_API_KEY); console.log(`YouTube API: 채널 영상 ${api.length}개 확인`); videos = videos.concat(api); }
       catch (e) { warn(`YouTube API 실패 (RSS만 사용): ${e.message}`); }
     }
     const map = new Map(old.items.map(v => [v.id, v]));
