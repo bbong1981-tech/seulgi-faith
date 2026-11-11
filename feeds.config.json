@@ -1,10 +1,17 @@
 {
   "youtube": {
     "handle": "@lifewordsermon",
-    "channelId": "",
-    "sunday": ["주일"],
-    "wednesday": ["수요"],
-    "exclude": ["#shorts", "#Shorts"],
+    "channelId": "UCIu9BLyp4GKUxgsFz_km4lg",
+    "sunday": [
+      "주일"
+    ],
+    "wednesday": [
+      "수요"
+    ],
+    "exclude": [
+      "#shorts",
+      "#Shorts"
+    ],
     "max": 500
   },
   "naver": {
