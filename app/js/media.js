@@ -41,6 +41,14 @@ const feedEmpty = (msg, url, label) => `<div class="card hymn-empty">${MASCOT(11
   <a class="btn primary" href="${url}" target="_blank" rel="noopener">${label}</a></div>`;
 
 // ───────── 설교 ─────────
+// "생명의말씀선교회 주일설교 | 제목 - 이요한 목사(2026.11.08) / 생명선 / 대한예수교침례회"
+//  → { title: "제목", preacher: "이요한 목사" } (형식이 다르면 원래 제목 그대로)
+function sermonParts(raw) {
+  let t = String(raw).replace(/\s*\/\s*[^/|]*\s*\/\s*[^/|]*$/, "");          // 끝의 "/ 생명선 / 대한예수교침례회"
+  t = t.replace(/^.*?(주일|수요)\s*(설교|예배)\s*[|｜:]\s*/, "");              // 앞의 "○○ 주일설교 | "
+  const m = t.match(/^(.*\S)\s*[-–]\s*([^-–()]+?(목사|전도사|선교사|장로|강도사))\s*(\([\d.\s]+\))?\s*$/);
+  return m ? { title: m[1], preacher: m[2].trim() } : { title: t.replace(/\s*\([\d.\s]+\)\s*$/, "") || raw, preacher: "" };
+}
 const SERMON_TYPES = { all: "전체", sunday: "주일설교", wednesday: "수요설교" };
 VIEWS.sermon = async function () {
   $("#topActions").innerHTML = `<a class="icon-btn" href="${SERMON_CHANNEL_URL}" target="_blank" rel="noopener" aria-label="유튜브 채널 열기">${ICON("play")}</a>`;
@@ -55,19 +63,20 @@ VIEWS.sermon = async function () {
   const first = items[0];
   $("#view").innerHTML = `
     <div class="tiles">
-      ${tile("peach", "play", "최근 주일설교", latest("sunday") ? fmtDate(latest("sunday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("sunday") ? esc(latest("sunday").title) : "아직 없어요")}
-      ${tile("mint", "play", "최근 수요설교", latest("wednesday") ? fmtDate(latest("wednesday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("wednesday") ? esc(latest("wednesday").title) : "아직 없어요")}
+      ${tile("peach", "play", "최근 주일설교", latest("sunday") ? fmtDate(latest("sunday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("sunday") ? esc(sermonParts(latest("sunday").title).title) : "아직 없어요")}
+      ${tile("mint", "play", "최근 수요설교", latest("wednesday") ? fmtDate(latest("wednesday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("wednesday") ? esc(sermonParts(latest("wednesday").title).title) : "아직 없어요")}
     </div>
     <div class="seg" style="display:flex;margin-bottom:14px">${Object.entries(SERMON_TYPES).map(([k, l]) => `<button style="flex:1" class="${S.sermonType === k ? "on" : ""}" data-act="sermonType" data-t="${k}">${l}</button>`).join("")}</div>
     ${first ? `<button class="card sermon-hero" data-act="sermonPlay" data-id="${first.id}">
         <span class="thumb169"><img src="https://i.ytimg.com/vi/${first.id}/hqdefault.jpg" alt="" loading="lazy"><span class="play-badge">${ICON("play", 26)}</span></span>
         <span class="sermon-meta"><span class="badge">${SERMON_TYPES[first.type]}</span> <span class="small muted">${fmtFeedDate(first.published)}</span></span>
-        <b class="sermon-title">${esc(first.title)}</b>
+        <b class="sermon-title">${esc(sermonParts(first.title).title)}</b>
+        ${sermonParts(first.title).preacher ? `<span class="sermon-meta small muted" style="margin-top:0">${esc(sermonParts(first.title).preacher)}</span>` : ""}
       </button>` : ""}
     <div class="card feed-list">${items.slice(1).map(v => `
       <button class="feed-row" data-act="sermonPlay" data-id="${v.id}">
         <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
-        <span class="feed-text"><b>${esc(v.title)}</b><span class="small muted"><span class="badge">${SERMON_TYPES[v.type]}</span> ${fmtFeedDate(v.published)}</span></span>
+        <span class="feed-text"><b>${esc(sermonParts(v.title).title)}</b><span class="small muted"><span class="badge">${SERMON_TYPES[v.type]}</span> ${fmtFeedDate(v.published)}${sermonParts(v.title).preacher ? " · " + esc(sermonParts(v.title).preacher) : ""}</span></span>
       </button>`).join("") || `<p class="small muted" style="margin:6px 4px">더 지난 설교는 유튜브 채널에서 볼 수 있어요.</p>`}</div>
     <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${SERMON_CHANNEL_URL}" target="_blank" rel="noopener">유튜브 채널 전체 보기</a></p>`;
 };
@@ -76,9 +85,10 @@ ACT.sermonPlay = async t => {
   const data = await loadFeed("sermons").catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
-  openSheet(`${sheetHead(esc(v.title))}
+  const sp = sermonParts(v.title);
+  openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
-    <p class="small muted" style="margin:10px 2px"><span class="badge">${SERMON_TYPES[v.type]}</span> ${fmtFeedDate(v.published)}</p>
+    <p class="small muted" style="margin:10px 2px"><span class="badge">${SERMON_TYPES[v.type]}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
     <div class="row wrap"><a class="btn" href="${watch}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a>
       <button class="btn" data-act="sermonShare" data-id="${v.id}">공유</button></div>`);
 };
