@@ -30,7 +30,12 @@ const blocks = (xml, name) => [...xml.matchAll(new RegExp(`<${name}(?:\\s[^>]*)?
 async function get(url) {
   if (process.env.FEED_MOCK_BASE) url = url.replace(/^https:\/\/[^/]+/, process.env.FEED_MOCK_BASE); // 시험용
   const r = await fetch(url, { headers: UA, redirect: "follow" });
-  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  if (!r.ok) {
+    // Google API는 실패 이유를 JSON으로 알려 줌 (키 값은 들어 있지 않음)
+    let why = "";
+    try { const e = JSON.parse(await r.text()).error; why = ` — ${e.message} [${(e.errors || []).map(x => x.reason).join(", ") || e.status || ""}]`; } catch { }
+    throw new Error(`${r.status}${why}`);
+  }
   return r.text();
 }
 async function readOld(name) {
