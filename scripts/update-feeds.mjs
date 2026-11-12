@@ -251,6 +251,16 @@ async function updateSeminar() {
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
+// (점검용) 초대장 페이지를 앱 안에 넣어 보여 줄 수 있는지 확인
+if (process.env.SEMINAR_DEBUG) {
+  try {
+    const r = await fetch("https://invite.jbch.org/mcard/list.php", { headers: UA, redirect: "follow" });
+    console.log(`초대장 점검: ${r.status} ${r.url} | X-Frame-Options=${r.headers.get("x-frame-options")} | CSP=${(r.headers.get("content-security-policy") || "").slice(0, 200)}`);
+    const t = await r.text();
+    console.log("초대장 점검 제목:", (t.match(/<title>([\s\S]*?)<\/title>/i) || [])[1], "| 길이", t.length, "| 본문:", t.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 800));
+  } catch (e) { console.log("초대장 점검 실패:", e.message); }
+}
+
 await updateSermons();
 await updateBlog();
 await updateClips();
