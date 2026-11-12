@@ -39,6 +39,13 @@
         "handle": "@today_word7",
         "id": "UClHKYHOlnBcGud_fVpa7xrw",
         "name": "하루 양식"
+      },
+      {
+        "handle": "@야곱의우물-i3s",
+        "id": "",
+        "types": [
+          "qna"
+        ]
       }
     ],
     "types": [

@@ -139,7 +139,7 @@ VIEWS.blog = async function () {
 // 여러 유튜브 채널에서 제목에 '조각설교'·'조각말씀'·'질의응답'이 들어간 짧은 영상
 TITLES.clips = "조각설교"; SUBTITLES.clips = "짧은 조각설교·조각말씀·질의응답을 최신순으로 들어요.";
 const CLIP_TYPES = { piece: "조각설교", word: "조각말씀", qna: "질의응답" };
-const CLIP_CHANNELS = ["@ludiasermon", "@1분말씀l", "@godislove67778", "@today_word7"];
+const CLIP_CHANNELS = ["@ludiasermon", "@1분말씀l", "@godislove67778", "@today_word7", "@야곱의우물-i3s"];
 S.clipType = "all"; S.clipCh = "all"; S.clipShow = 40;
 // "[조각말씀] 제목ㅣ홍정현 목사 #해시태그" → { title: "제목", speaker: "홍정현 목사" }
 function clipParts(raw) {

@@ -176,9 +176,11 @@ async function updateClips() {
   }
   if (changedConfig) await saveConfig();
   if (!ok) return;
+  // 채널마다 "types"를 적어 두면 그 종류만 모음 (예: 질의응답만)
+  const only = Object.fromEntries(c.channels.filter(ch => ch.types).map(ch => [ch.handle, ch.types]));
   const items = [...map.values()]
     .map(v => ({ id: v.id, title: v.title, published: v.published, type: clipType(v.title), channel: v.channel, handle: v.handle }))
-    .filter(v => v.type)
+    .filter(v => v.type && (!only[v.handle] || only[v.handle].includes(v.type)))
     .sort((a, b) => b.published.localeCompare(a.published))
     .slice(0, c.max || 500);
   if (same(items, old.items) && same(channels, old.channels)) { console.log("조각설교: 바뀐 것 없음"); return; }
