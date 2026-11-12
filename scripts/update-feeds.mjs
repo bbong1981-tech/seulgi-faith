@@ -257,6 +257,7 @@ if (process.env.SEMINAR_DEBUG) {
     try {
       const r = await fetch(u, { headers: UA, redirect: "follow" });
       const t = await r.text();
+      console.log(`교제 원본: ${u} → ${t.slice(0, 1500).replace(/\s+/g, " ")}`);
       console.log(`교제 점검: ${u} → ${r.status} ${r.url} | XFO=${r.headers.get("x-frame-options")} | CSP=${(r.headers.get("content-security-policy") || "").slice(0, 200)} | 제목=${(t.match(/<title>([\s\S]*?)<\/title>/i) || [])[1]} | 본문=${t.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 400)}`);
     } catch (e) { console.log(`교제 점검 실패: ${u} ${e.message}`); }
   }
