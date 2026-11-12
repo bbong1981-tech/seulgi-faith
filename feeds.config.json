@@ -22,19 +22,23 @@
     "channels": [
       {
         "handle": "@ludiasermon",
-        "id": ""
+        "id": "UC5Sqm2c1u16VXqpEB21koQQ",
+        "name": "루디아"
       },
       {
         "handle": "@1분말씀l",
-        "id": ""
+        "id": "UCVJuIt2ncvQzzexWH6lNp7A",
+        "name": "1분 말씀"
       },
       {
         "handle": "@godislove67778",
-        "id": ""
+        "id": "UCNIR5vpwu7j1EDFfvPxjb3w",
+        "name": "조각말씀"
       },
       {
         "handle": "@today_word7",
-        "id": ""
+        "id": "UClHKYHOlnBcGud_fVpa7xrw",
+        "name": "하루 양식"
       }
     ],
     "types": [
