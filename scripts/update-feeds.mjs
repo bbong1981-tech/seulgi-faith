@@ -251,18 +251,6 @@ async function updateSeminar() {
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
-// (점검용) 깨사모 홈페이지를 앱 안에 넣어 보여 줄 수 있는지 확인
-if (process.env.SEMINAR_DEBUG) {
-  for (const u of ["https://www.jbch.org/ko/ksm/"]) {
-    try {
-      const r = await fetch(u, { headers: UA, redirect: "follow" });
-      const t = await r.text();
-      console.log(`교제 원본: ${u} → ${t.slice(0, 1500).replace(/\s+/g, " ")}`);
-      console.log(`교제 점검: ${u} → ${r.status} ${r.url} | XFO=${r.headers.get("x-frame-options")} | CSP=${(r.headers.get("content-security-policy") || "").slice(0, 200)} | 제목=${(t.match(/<title>([\s\S]*?)<\/title>/i) || [])[1]} | 본문=${t.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 400)}`);
-    } catch (e) { console.log(`교제 점검 실패: ${u} ${e.message}`); }
-  }
-}
-
 await updateSermons();
 await updateBlog();
 await updateClips();
