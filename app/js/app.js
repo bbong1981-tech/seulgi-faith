@@ -135,7 +135,22 @@ function render() {
   $("#topActions").innerHTML = "";
   VIEWS[S.tab]();
   renderSide();
+  showActiveTab();
 }
+// 하단 탭바: 고른 메뉴가 화면 밖에 있으면 보이게 밀어 주고, 양끝 흐림 표시를 갱신
+function tabFade() {
+  const sc = $("#tabScroll"); if (!sc) return;
+  const left = sc.scrollLeft > 4, right = sc.scrollLeft + sc.clientWidth < sc.scrollWidth - 4;
+  for (const el of [sc, $("#tabbar")]) { el.classList.toggle("more-left", left); el.classList.toggle("more-right", right); }
+}
+function showActiveTab() {
+  const sc = $("#tabScroll"), b = sc?.querySelector("button.active"); if (!b) return;
+  if (b.offsetLeft < sc.scrollLeft) sc.scrollLeft = b.offsetLeft;
+  else if (b.offsetLeft + b.offsetWidth > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = b.offsetLeft + b.offsetWidth - sc.clientWidth;
+  tabFade();
+}
+$("#tabScroll")?.addEventListener("scroll", tabFade, { passive: true });
+window.addEventListener("resize", tabFade);
 function go(tab) { S.tab = tab; render(); window.scrollTo(0, 0); }
 
 const ACT = {};

@@ -1,5 +1,5 @@
 // 슬기로운 신앙생활 서비스워커: 앱 화면과 성경 본문을 저장해 오프라인에서도 동작
-const VERSION = "v20";
+const VERSION = "v21";
 const SHELL = `shell-${VERSION}`, DATA = "bible-data-v2";
 const SHELL_FILES = ["./", "index.html", "css/style.css", "js/icons.js", "js/books.js", "js/dict.js", "js/dict2.js", "js/app.js", "js/import.js", "js/hymn.js", "js/media.js", "manifest.json", "icons/favicon-v2.svg", "icons/favicon-v2.ico", "icons/favicon-32-v2.png", "icons/apple-touch-icon-v2.png", "icons/badge-96-v2.png", "icons/icon-192-v2.png", "icons/icon-512-v2.png"];
 
