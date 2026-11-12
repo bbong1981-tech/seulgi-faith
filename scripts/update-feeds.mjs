@@ -251,15 +251,6 @@ async function updateSeminar() {
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
-// (점검용) 방명록 주소가 앱에서 읽히는지 확인 — 읽기만 함
-if (process.env.SEMINAR_DEBUG) {
-  try {
-    const u = "https://script.google.com/macros/s/AKfycbzKeDODQ1JmGZ1Zd8B20fkFetY9U4-T5leES6Ete-RzCu7ZnxFeN50WtbxXPl32wsLd/exec";
-    const r = await fetch(u, { headers: { ...UA, Origin: "https://jbch-bible.netlify.app" }, redirect: "follow" });
-    console.log(`방명록 점검: ${r.status} | 최종 주소 ${r.url.slice(0, 60)}… | CORS=${r.headers.get("access-control-allow-origin")} | 형식=${r.headers.get("content-type")} | 내용=${(await r.text()).slice(0, 300)}`);
-  } catch (e) { console.log("방명록 점검 실패:", e.message); }
-}
-
 await updateSermons();
 await updateBlog();
 await updateClips();
