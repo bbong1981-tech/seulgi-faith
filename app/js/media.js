@@ -10,7 +10,7 @@
 
 const SERMON_CHANNEL_URL = "https://www.youtube.com/@lifewordsermon/videos";
 const BLOG_URL = "https://blog.naver.com/jbch_yd";
-TITLES.sermon = "설교"; SUBTITLES.sermon = "주일설교와 수요설교를 최신순으로 들어요.";
+TITLES.sermon = "설교"; SUBTITLES.sermon = "서울중앙교회 주일설교와 수요설교를 최신순으로 들어요.";
 TITLES.blog = "블로그"; SUBTITLES.blog = "교회 블로그의 새 글을 최신순으로 읽어요.";
 S.sermonType = "all";
 
