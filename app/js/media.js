@@ -222,6 +222,20 @@ window.renderSeminar = async function () {
 };
 ACT.semYear = t => { S.semYear = t.dataset.y; window.renderSeminar(); };
 
+// ───────── 초대장 (성경강연회 초대장 만들기·보내기) ─────────
+const INVITE_URL = "https://invite.jbch.org/mcard/list.php";
+TITLES.invite = "초대장"; SUBTITLES.invite = "사랑하는 당신을 성경강연회에 초대합니다";
+VIEWS.invite = function () {
+  $("#topActions").innerHTML = `<a class="icon-btn" href="${INVITE_URL}" target="_blank" rel="noopener" aria-label="새 창에서 열기">${ICON("upload")}</a>`;
+  $("#view").innerHTML = `
+    <div class="card invite-head">
+      <span class="t-ic">${ICON("mail", 22)}</span>
+      <span class="invite-text"><b class="display">성경강연회 초대장</b><span class="small muted">마음에 드는 초대장을 골라 사랑하는 분께 보내 보세요.</span></span>
+      <a class="btn sm" href="${INVITE_URL}" target="_blank" rel="noopener">새 창에서 열기</a>
+    </div>
+    <div class="invite-frame"><iframe src="${INVITE_URL}" title="성경강연회 초대장" loading="lazy" allow="clipboard-write; web-share"></iframe></div>`;
+};
+
 // 바로가기(./?tab=sermon 등)로 열었을 때
-if (["sermon", "blog", "clips"].includes(S.tab)) render();
+if (["sermon", "blog", "clips", "invite"].includes(S.tab)) render();
 else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움

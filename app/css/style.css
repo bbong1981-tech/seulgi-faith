@@ -438,3 +438,12 @@ label.field > span.row { display: flex; }
 .sem-table tr.now td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .sem-table tr.now td:first-child { border-radius: 10px 0 0 10px; }
 .sem-table tr.now td:last-child { border-radius: 0 10px 10px 0; }
+
+/* 초대장 */
+.invite-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(160deg, var(--peach) 0%, var(--card) 70%); }
+.invite-head .t-ic { width: 42px; height: 42px; border-radius: 14px; background: var(--peach-ic); color: #fff; display: grid; place-items: center; box-shadow: var(--clay-sm); flex-shrink: 0; }
+.invite-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.invite-text b { font-size: 18px; }
+.invite-frame { border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--clay); background: #fff; height: calc(100vh - 290px); min-height: 460px; }
+.invite-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+@media (min-width: 960px) { .invite-frame { height: calc(100vh - 250px); } }
