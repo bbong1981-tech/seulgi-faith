@@ -186,6 +186,48 @@ async function updateClips() {
   console.log(`조각설교: ${items.length}개 저장 (${(c.types || []).map(t => `${t.label} ${items.filter(v => v.type === t.id).length}`).join(", ")})`);
 }
 
+// ───────── 성경강연회 연간 일정 (교회 홈페이지의 표) ─────────
+// 한국 교회 홈페이지는 EUC-KR로 된 곳이 많아, 문자 코드를 확인해 읽음
+async function getPage(url) {
+  const r = await fetch(url, { headers: UA, redirect: "follow" });
+  if (!r.ok) throw new Error(`${r.status}`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  const head = buf.subarray(0, 3000).toString("latin1");
+  const cs = ((r.headers.get("content-type") || "").match(/charset=([\w-]+)/i) || head.match(/charset=["']?([\w-]+)/i) || [])[1] || "utf-8";
+  return new TextDecoder(/euc-?kr|ks_c_5601|cp949/i.test(cs) ? "euc-kr" : "utf-8").decode(buf);
+}
+const cellText = h => decode(h.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, " ")).replace(/[ \t\u00a0]+/g, " ").replace(/\s*\n\s*/g, "\n").trim();
+function parseTables(html) {
+  return blocks(html, "table").map(t => blocks(t, "tr").map(tr => [...tr.matchAll(/<t([hd])(?:\s[^>]*)?>([\s\S]*?)<\/t[hd]>/gi)].map(m => cellText(m[2]))).filter(r => r.some(c => c)));
+}
+async function updateSeminar() {
+  const c = config.seminar; if (!c) return;
+  const old = await readOld("seminar");
+  try {
+    const html = await getPage(c.url);
+    const title = cellText((html.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || "");
+    const tables = parseTables(html);
+    if (process.env.SEMINAR_DEBUG || !tables.length) {
+      // 처음 한 번 페이지 구조를 확인하기 위한 기록
+      console.log(`성경강연회: 페이지 제목 "${title}", 표 ${tables.length}개, 길이 ${html.length}`);
+      tables.forEach((t, i) => console.log(`표 ${i + 1}: ${t.length}줄 →`, JSON.stringify(t.slice(0, 6))));
+      const body = cellText((html.match(/<body[\s\S]*<\/body>/i) || [html])[0].replace(/<(script|style)[\s\S]*?<\/\1>/gi, ""));
+      console.log("본문 글자(앞부분):", body.slice(0, 3000).replace(/\n+/g, " / "));
+    }
+    // 날짜처럼 보이는 칸이 가장 많은 표를 일정표로 봄
+    const score = t => t.flat().filter(x => /\d{1,2}\s*[./월]\s*\d{1,2}/.test(x)).length;
+    const best = tables.slice().sort((a, b) => score(b) - score(a))[0];
+    if (!best || !score(best)) { warn("성경강연회: 일정 표를 찾지 못했습니다"); return; }
+    const head = best[0].every(x => !/\d{1,2}\s*[./월]\s*\d{1,2}/.test(x)) ? best[0] : [];
+    const rows = head.length ? best.slice(1) : best;
+    const data = { source: c.url, title: c.title || title, headers: head, rows };
+    if (same(data.headers, old.headers) && same(data.rows, old.rows)) { console.log("성경강연회: 바뀐 것 없음"); return; }
+    await save("seminar", { updated: new Date().toISOString(), ...data });
+    console.log(`성경강연회: ${rows.length}줄 저장 (머리줄: ${head.join(" | ")})`);
+  } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
+}
+
 await updateSermons();
 await updateBlog();
 await updateClips();
+await updateSeminar();

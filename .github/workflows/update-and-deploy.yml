@@ -34,6 +34,7 @@ jobs:
         run: node scripts/update-feeds.mjs
         env:
           YT_API_KEY: ${{ secrets.YT_API_KEY }}   # 없어도 됨 (있으면 지난 설교까지 더 많이)
+          SEMINAR_DEBUG: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}   # 직접 실행할 때만 페이지 구조 기록
 
       - name: 바뀐 목록 저장
         id: commit
