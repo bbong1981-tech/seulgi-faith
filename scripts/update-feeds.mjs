@@ -251,6 +251,15 @@ async function updateSeminar() {
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
+// (점검용) 새 초대장 주소를 앱 안에 넣어 보여 줄 수 있는지 확인
+if (process.env.SEMINAR_DEBUG) {
+  try {
+    const r = await fetch("https://mdata.jbch.org/mcard/", { headers: UA, redirect: "follow" });
+    const t = await r.text();
+    console.log(`초대장 점검: ${r.status} ${r.url} | XFO=${r.headers.get("x-frame-options")} | CSP=${(r.headers.get("content-security-policy") || "").slice(0, 200)} | 제목=${(t.match(/<title>([\s\S]*?)<\/title>/i) || [])[1]} | 앞부분=${t.slice(0, 300).replace(/\s+/g, " ")}`);
+  } catch (e) { console.log("초대장 점검 실패:", e.message); }
+}
+
 await updateSermons();
 await updateBlog();
 await updateClips();

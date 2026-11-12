@@ -223,7 +223,7 @@ window.renderSeminar = async function () {
 ACT.semYear = t => { S.semYear = t.dataset.y; window.renderSeminar(); };
 
 // ───────── 초대장 (성경강연회 초대장 만들기·보내기) ─────────
-const INVITE_URL = "https://invite.jbch.org/mcard/list.php";
+const INVITE_URL = "https://mdata.jbch.org/mcard/";
 TITLES.invite = "초대장"; SUBTITLES.invite = "사랑하는 당신을 성경강연회에 초대합니다";
 VIEWS.invite = function () {
   $("#topActions").innerHTML = `<a class="icon-btn" href="${INVITE_URL}" target="_blank" rel="noopener" aria-label="새 창에서 열기">${ICON("upload")}</a>`;
