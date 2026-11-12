@@ -423,3 +423,18 @@ label.field > span.row { display: flex; }
 .video-box { position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 18px; overflow: hidden; background: #000; box-shadow: var(--clay); }
 .video-box iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 @media (max-width: 420px) { .feed-thumb { width: 96px; } }
+
+/* 성경강연회 연간 일정 표 */
+.seminar { background: linear-gradient(160deg, var(--butter) 0%, var(--card) 55%); }
+.seminar-title { font-size: 19px; margin-right: auto; }
+.sem-table-wrap { overflow-x: auto; margin: 0 -4px; }
+.sem-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.sem-table th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 700; padding: 6px 8px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+.sem-table td { padding: 10px 8px; border-bottom: 1px dashed var(--line); vertical-align: top; line-height: 1.45; }
+.sem-table tr:last-child td { border-bottom: 0; }
+.sem-table td.nowrap { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sem-table tr.past td { color: var(--muted); }
+.sem-table tr.past td.nowrap { font-weight: 500; }
+.sem-table tr.now td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.sem-table tr.now td:first-child { border-radius: 10px 0 0 10px; }
+.sem-table tr.now td:last-child { border-radius: 0 10px 10px 0; }

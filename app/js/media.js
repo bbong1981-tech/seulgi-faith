@@ -185,5 +185,43 @@ ACT.clipChannels = async () => {
     <div class="card feed-list">${chans.map(c => `<a class="feed-row" href="https://www.youtube.com/${encodeURI(c.handle)}/videos" target="_blank" rel="noopener"><span class="feed-text"><b>${esc(c.name || c.handle)}</b><span class="small muted">${esc(c.handle)}</span></span></a>`).join("")}</div>`);
 };
 
+// ───────── 성경강연회 연간 일정 (일정 메뉴 맨 위) ─────────
+const SEMINAR_PAGE = "https://church.jbch.org/newsnotice/church_sche_seminar/seminar.php?flag=1&chId=58";
+const md = ds => { const d = parseYMD(ds); return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]})`; };
+window.renderSeminar = async function () {
+  const box = $("#seminarBox"); if (!box) return;
+  let data;
+  try { data = await loadFeed("seminar"); } catch { data = null; }
+  if (S.tab !== "events" || !$("#seminarBox")) return;
+  const items = data?.items || [];
+  if (!items.length) {
+    box.innerHTML = `<div class="card seminar"><div class="row"><b class="display seminar-title">영동교회 성경강연회</b><span class="spacer"></span><a class="btn sm" href="${SEMINAR_PAGE}" target="_blank" rel="noopener">홈페이지에서 보기</a></div></div>`;
+    return;
+  }
+  const today = todayStr();
+  const years = [...new Set(items.map(x => x.start.slice(0, 4)))];
+  const state = x => (x.end || x.start) < today ? "past" : x.start <= today ? "now" : "next";
+  const nextOne = items.find(x => state(x) !== "past");
+  // 처음에는 다가오는 강연회가 있는 해(올해가 다 끝났으면 내년)를 보여 줌
+  if (!years.includes(S.semYear)) S.semYear = nextOne ? nextOne.start.slice(0, 4) : (years.includes(today.slice(0, 4)) ? today.slice(0, 4) : years[years.length - 1]);
+  const list = items.filter(x => x.start.startsWith(S.semYear));
+  box.innerHTML = `<div class="card seminar">
+    <div class="row wrap" style="margin-bottom:6px">
+      <b class="display seminar-title">영동교회 성경강연회</b>
+      ${years.length > 1 ? `<div class="seg">${years.map(y => `<button class="${y === S.semYear ? "on" : ""}" data-act="semYear" data-y="${y}">${y}</button>`).join("")}</div>` : `<span class="badge">${S.semYear}년</span>`}
+    </div>
+    ${nextOne ? `<p class="small" style="margin:0 2px 10px">${state(nextOne) === "now" ? "🔔 지금 <b>진행 중</b>" : `다음 강연회 <b>${md(nextOne.start)}</b> · ${Math.max(0, diffDays(nextOne.start, today))}일 남음`} — ${esc(nextOne.kind)}, ${esc(nextOne.speaker)}</p>` : ""}
+    <div class="sem-table-wrap"><table class="sem-table">
+      <thead><tr><th>기간</th><th>구분</th><th>장소</th><th>강사</th></tr></thead>
+      <tbody>${list.map(x => `<tr class="${state(x)}">
+        <td class="nowrap">${md(x.start)}${x.end && x.end !== x.start ? `<br><span class="muted">~ ${md(x.end)}</span>` : ""}${state(x) === "now" ? `<br><span class="badge">진행 중</span>` : ""}</td>
+        <td>${esc(x.kind)}</td><td>${esc(x.place)}</td><td>${esc(x.speaker)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="small muted" style="margin:8px 2px 0">${data.updated ? `${agoText(data.updated)} 확인 · ` : ""}<a href="${SEMINAR_PAGE}" target="_blank" rel="noopener">교회 홈페이지에서 보기</a></p>
+  </div>`;
+};
+ACT.semYear = t => { S.semYear = t.dataset.y; window.renderSeminar(); };
+
 // 바로가기(./?tab=sermon 등)로 열었을 때
 if (["sermon", "blog", "clips"].includes(S.tab)) render();
+else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움

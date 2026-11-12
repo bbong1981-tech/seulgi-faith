@@ -226,26 +226,28 @@ function parseSeminarText(html, year) {
   }
   return out;
 }
+// 화면에 보이는 연도: 연도 버튼(2025, 2027) 사이에 글자로만 적힌 연도
+const pageYear = html => Number((html.match(/<\/div>\s*(20\d\d)\s*<div[^>]*selYear=/) || [])[1]) || 0;
 async function updateSeminar() {
   const c = config.seminar; if (!c) return;
   const old = await readOld("seminar");
   try {
-    const html = await getPage(c.url);
-    // 화면에 선택된 연도(없으면 올해, 한국 시간 기준)
     const kstYear = new Date(Date.now() + 9 * 3600e3).getUTCFullYear();
-    const sel = html.match(/class=["'][^"']*\b(?:on|active|selected|current)\b[^"']*["'][^>]*>\s*(?:<[^>]+>\s*)*(20\d\d)\s*</i);
-    const year = sel ? Number(sel[1]) : kstYear;
-    if (process.env.SEMINAR_DEBUG) {
-      const at = html.indexOf("지난일정보기");
-      console.log("성경강연회 원본(일정 부분):", html.slice(Math.max(0, at - 1500), at + 2500).replace(/\s+/g, " "));
-      console.log("성경강연회 연도 링크:", [...new Set([...html.matchAll(/[^"'\s]*(?:year|yy|syear)[=:][^"'\s]*/gi)].map(m => m[0]))].slice(0, 10).join(" , "));
-    }
-    const items = parseSeminarText(html, year);
+    const html = await getPage(c.url);
+    const year = pageYear(html) || kstYear;
+    if (process.env.SEMINAR_DEBUG) console.log(`성경강연회: 페이지 연도 ${pageYear(html) || "(못 찾음)"}`);
+    let items = parseSeminarText(html, year);
+    // 다음 해 일정이 올라와 있으면 함께 (연말에 내년 일정을 미리 볼 수 있게)
+    try {
+      const nextHtml = await getPage(`${c.url}&selYear=${year + 1}`);
+      const next = parseSeminarText(nextHtml, year + 1);
+      if (next.length) { items = items.concat(next); console.log(`성경강연회: ${year + 1}년 ${next.length}건도 있음`); }
+    } catch (e) { warn(`성경강연회 ${year + 1}년 일정 확인 실패: ${e.message}`); }
     if (!items.length) { warn("성경강연회: 일정을 찾지 못했습니다"); return; }
     const data = { source: c.url, title: c.title, year, items };
     if (same(data.items, old.items) && data.year === old.year) { console.log("성경강연회: 바뀐 것 없음"); return; }
     await save("seminar", { updated: new Date().toISOString(), ...data });
-    console.log(`성경강연회: ${year}년 ${items.length}건 저장 →`, items.map(x => `${x.start}~${x.end} ${x.kind} ${x.place} ${x.speaker}`).join(" | "));
+    console.log(`성경강연회: ${items.length}건 저장 →`, items.map(x => `${x.start}~${x.end} ${x.kind} ${x.place} ${x.speaker}`).join(" | "));
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 

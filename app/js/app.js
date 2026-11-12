@@ -845,6 +845,7 @@ VIEWS.events = function () {
   let weekCount = 0;
   for (let i = 0; i < 7; i++) weekCount += eventsOn(addDays(todayStr(), i)).length;
   $("#view").innerHTML = `
+    <div id="seminarBox"></div>
     ${perm === "default" ? `<div class="alarm-banner"><span>🔔</span><span style="flex:1">일정 알림을 받으려면 알림을 허용해 주세요.</span><button class="btn sm" data-act="askNotify">허용</button></div>` : ""}
     ${perm === "denied" ? `<div class="card small">🔕 브라우저에서 알림이 차단되어 있습니다. 브라우저 설정에서 이 사이트의 알림을 허용하거나, 📤 버튼으로 휴대폰 캘린더에 일정을 추가하세요.</div>` : ""}
     <div class="tiles">
@@ -862,6 +863,7 @@ VIEWS.events = function () {
     ${selList.map(e => eventCard(e, S.calSel)).join("") || `<p class="muted small" style="margin:4px 2px 12px">일정이 없습니다.</p>`}
     <div class="section-title">다가오는 2주</div>
     ${upcoming || `<p class="muted small">예정된 일정이 없습니다.</p>`}`;
+  window.renderSeminar?.(); // 맨 위: 성경강연회 연간 일정 (media.js)
 };
 function eventCard(e, ds, showDate) {
   const c = EV_CATS[e.cat] || "#888";
