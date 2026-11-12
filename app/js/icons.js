@@ -24,6 +24,7 @@ const ICON_PATHS = {
   repeat: '<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>',
   music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
   play: '<rect x="2.5" y="5" width="19" height="14" rx="4.2"/><path d="M10.2 9.3v5.4l4.6-2.7z" fill="currentColor"/>',
+  clip: '<rect x="6.2" y="2.5" width="11.6" height="19" rx="3.2"/><path d="M10.4 9.3v5.4l4.4-2.7z" fill="currentColor"/>',
   pen: '<path d="M4 20h4.2L19.3 8.9a2.9 2.9 0 0 0-4.2-4.2L4 15.8z"/><path d="M13.6 6.3l4.1 4.1M12 20h8"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'
 };

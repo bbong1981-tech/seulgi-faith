@@ -17,5 +17,49 @@
   "naver": {
     "blogId": "jbch_yd",
     "max": 300
+  },
+  "clips": {
+    "channels": [
+      {
+        "handle": "@ludiasermon",
+        "id": ""
+      },
+      {
+        "handle": "@1분말씀l",
+        "id": ""
+      },
+      {
+        "handle": "@godislove67778",
+        "id": ""
+      },
+      {
+        "handle": "@today_word7",
+        "id": ""
+      }
+    ],
+    "types": [
+      {
+        "id": "piece",
+        "label": "조각설교",
+        "words": [
+          "조각설교"
+        ]
+      },
+      {
+        "id": "word",
+        "label": "조각말씀",
+        "words": [
+          "조각말씀"
+        ]
+      },
+      {
+        "id": "qna",
+        "label": "질의응답",
+        "words": [
+          "질의응답"
+        ]
+      }
+    ],
+    "max": 500
   }
 }

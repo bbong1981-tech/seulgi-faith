@@ -58,27 +58,33 @@ function sermonType(title) {
   if ((yt.wednesday || []).some(w => title.includes(w))) return "wednesday";
   return null;
 }
-async function channelId() {
-  const yt = config.youtube;
-  if (yt.channelId) return yt.channelId;
-  const html = await get(`https://www.youtube.com/${yt.handle}`);
+// @핸들 → 채널 ID (UC로 시작). 한글 핸들도 됨
+async function resolveHandle(handle) {
+  const html = await get(`https://www.youtube.com/${encodeURIComponent(handle).replace(/%40/g, "@")}`);
   const m = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{22})"/)
     || html.match(/"externalId":"(UC[\w-]{22})"/) || html.match(/"channelId":"(UC[\w-]{22})"/)
     || html.match(/itemprop="identifier" content="(UC[\w-]{22})"/);
-  if (!m) throw new Error(`채널 ID를 찾지 못했습니다: ${yt.handle}`);
-  yt.channelId = m[1];
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n"); // 다음부터는 바로 사용
-  console.log(`채널 ID: ${m[1]}`);
+  if (!m) throw new Error(`채널 ID를 찾지 못했습니다: ${handle}`);
+  console.log(`채널 ID: ${handle} → ${m[1]}`);
   return m[1];
+}
+const saveConfig = () => writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n"); // 찾은 채널 ID를 기억해 다음부터 바로 사용
+async function channelId() {
+  const yt = config.youtube;
+  if (yt.channelId) return yt.channelId;
+  yt.channelId = await resolveHandle(yt.handle);
+  await saveConfig();
+  return yt.channelId;
 }
 async function fetchRssVideos(id) {
   const xml = await get(`https://www.youtube.com/feeds/videos.xml?channel_id=${id}`);
-  return blocks(xml, "entry").map(e => ({ id: tag(e, "yt:videoId"), title: tag(e, "title"), published: tag(e, "published") }));
+  const channel = tag(xml.split("<entry")[0], "title");
+  return blocks(xml, "entry").map(e => ({ id: tag(e, "yt:videoId"), title: tag(e, "title"), published: tag(e, "published"), channel }));
 }
-async function fetchApiVideos(id, key) {
+async function fetchApiVideos(id, key, pages = 10) {
   const list = [], playlist = "UU" + id.slice(2);
   let page = "";
-  for (let i = 0; i < 10; i++) { // 최대 500개
+  for (let i = 0; i < pages; i++) { // 한 번에 50개씩
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlist}&key=${key}${page ? "&pageToken=" + page : ""}`;
     const data = JSON.parse(await get(url));
     for (const it of data.items || []) list.push({ id: it.contentDetails.videoId, title: it.snippet.title, published: it.contentDetails.videoPublishedAt || it.snippet.publishedAt });
@@ -137,5 +143,49 @@ async function updateBlog() {
   } catch (e) { warn(`블로그 글을 가져오지 못했습니다: ${e.message}`); }
 }
 
+// ───────── 조각설교 (여러 채널에서 제목에 정해진 낱말이 들어간 영상만) ─────────
+function clipType(title) {
+  const c = config.clips;
+  return (c.types || []).find(t => t.words.some(w => title.includes(w)))?.id || null;
+}
+async function updateClips() {
+  const c = config.clips; if (!c) return;
+  const old = await readOld("clips");
+  const map = new Map(old.items.map(v => [v.id, v]));
+  const channels = [];
+  let changedConfig = false, ok = 0;
+  for (const ch of c.channels) {
+    try {
+      if (!ch.id) { ch.id = await resolveHandle(ch.handle); changedConfig = true; }
+      let videos = await fetchRssVideos(ch.id);
+      const name = videos[0]?.channel || ch.name || ch.handle;
+      if (process.env.YT_API_KEY) {
+        try { videos = videos.concat((await fetchApiVideos(ch.id, process.env.YT_API_KEY, 4)).map(v => ({ ...v, channel: name }))); }
+        catch (e) { warn(`YouTube API 실패 (${ch.handle}, RSS만 사용): ${e.message}`); }
+      }
+      if (name && ch.name !== name) { ch.name = name; changedConfig = true; }
+      for (const v of videos) if (v.id) map.set(v.id, { ...map.get(v.id), ...v, channel: name, handle: ch.handle });
+      channels.push({ handle: ch.handle, name, url: `https://www.youtube.com/${ch.handle}` });
+      console.log(`조각설교: ${ch.handle} (${name}) 최신 영상 ${videos.length}개 확인`);
+      ok++;
+    } catch (e) {
+      warn(`조각설교 채널을 가져오지 못했습니다 (${ch.handle}): ${e.message}`);
+      const prev = (old.channels || []).find(x => x.handle === ch.handle);
+      if (prev) channels.push(prev);
+    }
+  }
+  if (changedConfig) await saveConfig();
+  if (!ok) return;
+  const items = [...map.values()]
+    .map(v => ({ id: v.id, title: v.title, published: v.published, type: clipType(v.title), channel: v.channel, handle: v.handle }))
+    .filter(v => v.type)
+    .sort((a, b) => b.published.localeCompare(a.published))
+    .slice(0, c.max || 500);
+  if (same(items, old.items) && same(channels, old.channels)) { console.log("조각설교: 바뀐 것 없음"); return; }
+  await save("clips", { updated: new Date().toISOString(), channels, items });
+  console.log(`조각설교: ${items.length}개 저장 (${(c.types || []).map(t => `${t.label} ${items.filter(v => v.type === t.id).length}`).join(", ")})`);
+}
+
 await updateSermons();
 await updateBlog();
+await updateClips();

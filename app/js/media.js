@@ -95,19 +95,22 @@ VIEWS.sermon = async function () {
     <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${SERMON_CHANNEL_URL}" target="_blank" rel="noopener">유튜브 채널 전체 보기</a></p>`;
 };
 ACT.sermonType = t => { S.sermonType = t.dataset.t; render(); };
+// 재생 화면: 설교(sermons)와 조각설교(clips)가 함께 씀
 ACT.sermonPlay = async t => {
-  const data = await loadFeed("sermons").catch(() => null);
+  const feed = t.dataset.feed || "sermons";
+  const data = await loadFeed(feed).catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
-  const sp = sermonParts(v.title);
+  const sp = feed === "clips" ? { title: clipTitle(v.title), preacher: v.channel || "" } : sermonParts(v.title);
+  const label = feed === "clips" ? CLIP_TYPES[v.type] : SERMON_TYPES[v.type];
   openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
-    <p class="small muted" style="margin:10px 2px"><span class="badge">${SERMON_TYPES[v.type]}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
+    <p class="small muted" style="margin:10px 2px"><span class="badge">${label}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
     <div class="row wrap"><a class="btn" href="${watch}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a>
-      <button class="btn" data-act="sermonShare" data-id="${v.id}">공유</button></div>`);
+      <button class="btn" data-act="sermonShare" data-id="${v.id}" data-feed="${feed}">공유</button></div>`);
 };
 ACT.sermonShare = async t => {
-  const data = await loadFeed("sermons").catch(() => null);
+  const data = await loadFeed(t.dataset.feed || "sermons").catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const text = `${v.title}\nhttps://www.youtube.com/watch?v=${v.id}`;
   if (navigator.share) { try { await navigator.share({ text }); } catch { } }
@@ -132,5 +135,47 @@ VIEWS.blog = async function () {
     <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${BLOG_URL}" target="_blank" rel="noopener">블로그 전체 보기</a></p>`;
 };
 
+// ───────── 조각설교 ─────────
+// 여러 유튜브 채널에서 제목에 '조각설교'·'조각말씀'·'질의응답'이 들어간 짧은 영상
+TITLES.clips = "조각설교"; SUBTITLES.clips = "짧은 조각설교·조각말씀·질의응답을 최신순으로 들어요.";
+const CLIP_TYPES = { piece: "조각설교", word: "조각말씀", qna: "질의응답" };
+const CLIP_CHANNELS = ["@ludiasermon", "@1분말씀l", "@godislove67778", "@today_word7"];
+S.clipType = "all"; S.clipCh = "all"; S.clipShow = 40;
+// 제목 앞뒤의 [조각설교], #해시태그 등을 빼고 보여 줌
+const clipTitle = raw => String(raw).replace(/#\S+/g, "").replace(/^\s*[\[(【]?\s*(조각설교|조각말씀|질의응답)\s*[\])】]?\s*[|｜:·\-–]?\s*/, "").replace(/\s*[|｜]\s*$/, "").trim() || raw;
+VIEWS.clips = async function () {
+  $("#topActions").innerHTML = `<button class="icon-btn" data-act="clipChannels" aria-label="채널 보기">${ICON("play")}</button>`;
+  $("#view").innerHTML = `<p class="muted">조각설교를 불러오는 중…</p>`;
+  let data;
+  try { data = await loadFeed("clips"); } catch { data = null; }
+  if (S.tab !== "clips") return;
+  const all = data?.items || [];
+  if (!all.length) { $("#view").innerHTML = feedEmpty("아직 조각설교가 없어요", `https://www.youtube.com/${CLIP_CHANNELS[0]}`, "유튜브에서 보기"); return; }
+  const chans = data.channels || [];
+  const items = all.filter(v => (S.clipType === "all" || v.type === S.clipType) && (S.clipCh === "all" || v.handle === S.clipCh));
+  const count = t => all.filter(v => v.type === t).length;
+  $("#view").innerHTML = `
+    <div class="seg" style="display:flex;margin-bottom:10px">${[["all", "전체"], ...Object.entries(CLIP_TYPES)].map(([k, l]) => `<button style="flex:1" class="${S.clipType === k ? "on" : ""}" data-act="clipType" data-t="${k}">${l}${k === "all" ? "" : ` <small>${count(k)}</small>`}</button>`).join("")}</div>
+    <div class="chips">${[["all", "모든 채널"], ...chans.map(c => [c.handle, c.name || c.handle])].map(([k, l]) => `<button class="chip ${S.clipCh === k ? "on" : ""}" data-act="clipCh" data-c="${esc(k)}">${esc(l)}</button>`).join("")}</div>
+    ${items.length ? `<div class="card feed-list">${items.slice(0, S.clipShow).map(v => `
+      <button class="feed-row" data-act="sermonPlay" data-feed="clips" data-id="${v.id}">
+        <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
+        <span class="feed-text"><b>${esc(clipTitle(v.title))}</b><span class="small muted"><span class="badge">${CLIP_TYPES[v.type]}</span> ${fmtFeedDate(v.published)} · ${esc(v.channel || "")}</span></span>
+      </button>`).join("")}</div>
+      ${items.length > S.clipShow ? `<p style="text-align:center"><button class="btn" data-act="clipMore">더 보기 (${items.length - S.clipShow}개 더)</button></p>` : ""}`
+    : `<p class="empty">이 조건에 맞는 영상이 아직 없어요.</p>`}
+    <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨` : ""}</p>`;
+};
+ACT.clipType = t => { S.clipType = t.dataset.t; S.clipShow = 40; render(); };
+ACT.clipCh = t => { S.clipCh = t.dataset.c; S.clipShow = 40; render(); };
+ACT.clipMore = () => { const y = scrollY; S.clipShow += 40; render(); scrollTo(0, y); };
+ACT.clipChannels = async () => {
+  const data = await loadFeed("clips").catch(() => null);
+  const chans = data?.channels?.length ? data.channels : CLIP_CHANNELS.map(h => ({ handle: h, name: h }));
+  openSheet(`${sheetHead("조각설교 채널")}
+    <p class="small muted" style="margin-top:-4px">아래 채널에서 제목에 '조각설교', '조각말씀', '질의응답'이 들어간 영상만 모아 옵니다.</p>
+    <div class="card feed-list">${chans.map(c => `<a class="feed-row" href="https://www.youtube.com/${encodeURI(c.handle)}/videos" target="_blank" rel="noopener"><span class="feed-text"><b>${esc(c.name || c.handle)}</b><span class="small muted">${esc(c.handle)}</span></span></a>`).join("")}</div>`);
+};
+
 // 바로가기(./?tab=sermon 등)로 열었을 때
-if (S.tab === "sermon" || S.tab === "blog") render();
+if (["sermon", "blog", "clips"].includes(S.tab)) render();
