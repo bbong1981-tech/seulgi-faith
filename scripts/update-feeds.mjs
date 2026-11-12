@@ -200,30 +200,52 @@ const cellText = h => decode(h.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g,
 function parseTables(html) {
   return blocks(html, "table").map(t => blocks(t, "tr").map(tr => [...tr.matchAll(/<t([hd])(?:\s[^>]*)?>([\s\S]*?)<\/t[hd]>/gi)].map(m => cellText(m[2]))).filter(r => r.some(c => c)));
 }
+// 강연회 페이지는 표가 아니라 칸(div)으로 되어 있어, 본문 글자 순서로 읽음:
+//   "19 / 1월 / 대집회 / ~1/25일까지 / 대강당 / 최훈일 목사 / 3 / 2월 / 교회학교 / ..."
+function parseSeminarText(html, year) {
+  const body = (html.match(/<body[\s\S]*<\/body>/i) || [html])[0].replace(/<(script|style)[\s\S]*?<\/\1>/gi, "");
+  const toks = decode(body.replace(/<[^>]+>/g, "\n")).split("\n").map(t => t.replace(/[\s\u00a0]+/g, " ").trim()).filter(Boolean);
+  let a = toks.findIndex(t => t.includes("지난일정보기")); if (a < 0) a = 0;
+  let b = toks.findIndex((t, k) => k > a && /일정 등록|일정등록/.test(t)); if (b < 0) b = toks.length;
+  const seg = toks.slice(a + 1, b), out = [];
+  for (let k = 0; k < seg.length; k++) {
+    const d = seg[k].match(/^(\d{1,2})$/), m = (seg[k + 1] || "").match(/^(\d{1,2})\s*월$/);
+    if (!d || !m) continue;
+    const it = { start: `${year}-${String(m[1]).padStart(2, "0")}-${String(d[1]).padStart(2, "0")}`, end: "", kind: "", place: "", speaker: "" };
+    let n = k + 2;
+    for (; n < seg.length; n++) {
+      const t = seg[n];
+      if (/^\d{1,2}$/.test(t) && /^\d{1,2}\s*월$/.test(seg[n + 1] || "")) break;
+      const e = t.match(/~\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
+      if (e) { let y = year; if (Number(e[1]) < Number(m[1])) y++; it.end = `${y}-${e[1].padStart(2, "0")}-${e[2].padStart(2, "0")}`; }
+      else if (/(목사|전도사|선교사|강도사)$/.test(t)) it.speaker = t;
+      else if (/집회|교회학교|강연|세미나|캠프/.test(t) && !it.kind) it.kind = t;
+      else if (!it.place) it.place = t;
+    }
+    out.push(it); k = n - 1;
+  }
+  return out;
+}
 async function updateSeminar() {
   const c = config.seminar; if (!c) return;
   const old = await readOld("seminar");
   try {
     const html = await getPage(c.url);
-    const title = cellText((html.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || "");
-    const tables = parseTables(html);
-    if (process.env.SEMINAR_DEBUG || !tables.length) {
-      // 처음 한 번 페이지 구조를 확인하기 위한 기록
-      console.log(`성경강연회: 페이지 제목 "${title}", 표 ${tables.length}개, 길이 ${html.length}`);
-      tables.forEach((t, i) => console.log(`표 ${i + 1}: ${t.length}줄 →`, JSON.stringify(t.slice(0, 6))));
-      const body = cellText((html.match(/<body[\s\S]*<\/body>/i) || [html])[0].replace(/<(script|style)[\s\S]*?<\/\1>/gi, ""));
-      console.log("본문 글자(앞부분):", body.slice(0, 3000).replace(/\n+/g, " / "));
+    // 화면에 선택된 연도(없으면 올해, 한국 시간 기준)
+    const kstYear = new Date(Date.now() + 9 * 3600e3).getUTCFullYear();
+    const sel = html.match(/class=["'][^"']*\b(?:on|active|selected|current)\b[^"']*["'][^>]*>\s*(?:<[^>]+>\s*)*(20\d\d)\s*</i);
+    const year = sel ? Number(sel[1]) : kstYear;
+    if (process.env.SEMINAR_DEBUG) {
+      const at = html.indexOf("지난일정보기");
+      console.log("성경강연회 원본(일정 부분):", html.slice(Math.max(0, at - 1500), at + 2500).replace(/\s+/g, " "));
+      console.log("성경강연회 연도 링크:", [...new Set([...html.matchAll(/[^"'\s]*(?:year|yy|syear)[=:][^"'\s]*/gi)].map(m => m[0]))].slice(0, 10).join(" , "));
     }
-    // 날짜처럼 보이는 칸이 가장 많은 표를 일정표로 봄
-    const score = t => t.flat().filter(x => /\d{1,2}\s*[./월]\s*\d{1,2}/.test(x)).length;
-    const best = tables.slice().sort((a, b) => score(b) - score(a))[0];
-    if (!best || !score(best)) { warn("성경강연회: 일정 표를 찾지 못했습니다"); return; }
-    const head = best[0].every(x => !/\d{1,2}\s*[./월]\s*\d{1,2}/.test(x)) ? best[0] : [];
-    const rows = head.length ? best.slice(1) : best;
-    const data = { source: c.url, title: c.title || title, headers: head, rows };
-    if (same(data.headers, old.headers) && same(data.rows, old.rows)) { console.log("성경강연회: 바뀐 것 없음"); return; }
+    const items = parseSeminarText(html, year);
+    if (!items.length) { warn("성경강연회: 일정을 찾지 못했습니다"); return; }
+    const data = { source: c.url, title: c.title, year, items };
+    if (same(data.items, old.items) && data.year === old.year) { console.log("성경강연회: 바뀐 것 없음"); return; }
     await save("seminar", { updated: new Date().toISOString(), ...data });
-    console.log(`성경강연회: ${rows.length}줄 저장 (머리줄: ${head.join(" | ")})`);
+    console.log(`성경강연회: ${year}년 ${items.length}건 저장 →`, items.map(x => `${x.start}~${x.end} ${x.kind} ${x.place} ${x.speaker}`).join(" | "));
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
