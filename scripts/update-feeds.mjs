@@ -253,7 +253,7 @@ async function updateSeminar() {
 
 // (점검용) 깨사모 홈페이지를 앱 안에 넣어 보여 줄 수 있는지 확인
 if (process.env.SEMINAR_DEBUG) {
-  for (const u of ["https://ksm.jbch.org/", "http://ksm.jbch.org/"]) {
+  for (const u of ["https://www.jbch.org/ko/ksm/"]) {
     try {
       const r = await fetch(u, { headers: UA, redirect: "follow" });
       const t = await r.text();
