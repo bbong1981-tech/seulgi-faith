@@ -101,7 +101,7 @@ ACT.sermonPlay = async t => {
   const data = await loadFeed(feed).catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
-  const sp = feed === "clips" ? { title: clipTitle(v.title), preacher: v.channel || "" } : sermonParts(v.title);
+  const sp = feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
   const label = feed === "clips" ? CLIP_TYPES[v.type] : SERMON_TYPES[v.type];
   openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
@@ -141,8 +141,16 @@ TITLES.clips = "조각설교"; SUBTITLES.clips = "짧은 조각설교·조각말
 const CLIP_TYPES = { piece: "조각설교", word: "조각말씀", qna: "질의응답" };
 const CLIP_CHANNELS = ["@ludiasermon", "@1분말씀l", "@godislove67778", "@today_word7"];
 S.clipType = "all"; S.clipCh = "all"; S.clipShow = 40;
-// 제목 앞뒤의 [조각설교], #해시태그 등을 빼고 보여 줌
-const clipTitle = raw => String(raw).replace(/#\S+/g, "").replace(/^\s*[\[(【]?\s*(조각설교|조각말씀|질의응답)\s*[\])】]?\s*[|｜:·\-–]?\s*/, "").replace(/\s*[|｜]\s*$/, "").trim() || raw;
+// "[조각말씀] 제목ㅣ홍정현 목사 #해시태그" → { title: "제목", speaker: "홍정현 목사" }
+function clipParts(raw) {
+  let t = String(raw).replace(/#\S+/g, " ").replace(/\s+/g, " ").trim();
+  t = t.replace(/^\s*[\[(【]?\s*(조각설교|조각말씀|질의응답)\s*[\])】]?\s*[|｜ㅣ:·\-–]?\s*/, "");
+  let speaker = "";
+  const m = t.match(/^(.*\S)\s*[|｜ㅣ]\s*([^|｜ㅣ]{1,20})$/); // 마지막 구분선 뒤가 짧으면 말씀하신 분
+  if (m && /(목사|전도사|선교사|장로|강도사|P|형제|자매|님)\s*$/.test(m[2])) { t = m[1]; speaker = m[2].trim(); }
+  return { title: t.replace(/\s*[|｜ㅣ]\s*$/, "").trim() || String(raw), speaker };
+}
+const clipTitle = raw => clipParts(raw).title;
 VIEWS.clips = async function () {
   $("#topActions").innerHTML = `<button class="icon-btn" data-act="clipChannels" aria-label="채널 보기">${ICON("play")}</button>`;
   $("#view").innerHTML = `<p class="muted">조각설교를 불러오는 중…</p>`;
@@ -155,12 +163,12 @@ VIEWS.clips = async function () {
   const items = all.filter(v => (S.clipType === "all" || v.type === S.clipType) && (S.clipCh === "all" || v.handle === S.clipCh));
   const count = t => all.filter(v => v.type === t).length;
   $("#view").innerHTML = `
-    <div class="seg" style="display:flex;margin-bottom:10px">${[["all", "전체"], ...Object.entries(CLIP_TYPES)].map(([k, l]) => `<button style="flex:1" class="${S.clipType === k ? "on" : ""}" data-act="clipType" data-t="${k}">${l}${k === "all" ? "" : ` <small>${count(k)}</small>`}</button>`).join("")}</div>
+    <div class="seg" style="display:flex;margin-bottom:10px">${[["all", "전체"], ...Object.entries(CLIP_TYPES).filter(([k]) => count(k) > 0)].map(([k, l]) => `<button style="flex:1" class="${S.clipType === k ? "on" : ""}" data-act="clipType" data-t="${k}">${l}${k === "all" ? "" : ` <small>${count(k)}</small>`}</button>`).join("")}</div>
     <div class="chips">${[["all", "모든 채널"], ...chans.map(c => [c.handle, c.name || c.handle])].map(([k, l]) => `<button class="chip ${S.clipCh === k ? "on" : ""}" data-act="clipCh" data-c="${esc(k)}">${esc(l)}</button>`).join("")}</div>
     ${items.length ? `<div class="card feed-list">${items.slice(0, S.clipShow).map(v => `
       <button class="feed-row" data-act="sermonPlay" data-feed="clips" data-id="${v.id}">
         <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
-        <span class="feed-text"><b>${esc(clipTitle(v.title))}</b><span class="small muted"><span class="badge">${CLIP_TYPES[v.type]}</span> ${fmtFeedDate(v.published)} · ${esc(v.channel || "")}</span></span>
+        <span class="feed-text"><b>${esc(clipTitle(v.title))}</b><span class="small muted"><span class="badge">${CLIP_TYPES[v.type]}</span> ${fmtFeedDate(v.published)} · ${esc([clipParts(v.title).speaker, v.channel].filter(Boolean).join(" · "))}</span></span>
       </button>`).join("")}</div>
       ${items.length > S.clipShow ? `<p style="text-align:center"><button class="btn" data-act="clipMore">더 보기 (${items.length - S.clipShow}개 더)</button></p>` : ""}`
     : `<p class="empty">이 조건에 맞는 영상이 아직 없어요.</p>`}
