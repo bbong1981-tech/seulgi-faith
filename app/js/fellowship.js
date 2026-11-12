@@ -6,7 +6,7 @@
    ============================================================ */
 
 const KSM_URL = "https://ksm.jbch.org/";
-const GUESTBOOK_API = ""; // 예: "https://script.google.com/macros/s/……/exec"
+const GUESTBOOK_API = "https://script.google.com/macros/s/AKfycbzKeDODQ1JmGZ1Zd8B20fkFetY9U4-T5leES6Ete-RzCu7ZnxFeN50WtbxXPl32wsLd/exec"; // 구글 시트 방명록 (README의 '방명록 설정')
 TITLES.fellow = "교제"; SUBTITLES.fellow = "깨사모에서 소식을 나누고, 방명록에 따뜻한 한마디를 남겨요.";
 
 let guestbookCache = null;
