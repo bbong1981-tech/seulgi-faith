@@ -81,6 +81,10 @@ async function fetchRssVideos(id) {
   const channel = tag(xml.split("<entry")[0], "title");
   return blocks(xml, "entry").map(e => ({ id: tag(e, "yt:videoId"), title: tag(e, "title"), published: tag(e, "published"), channel }));
 }
+async function fetchRssPlaylist(id) {
+  const xml = await get(`https://www.youtube.com/feeds/videos.xml?playlist_id=${id}`);
+  return blocks(xml, "entry").map(e => ({ id: tag(e, "yt:videoId"), title: tag(e, "title"), published: tag(e, "published") }));
+}
 async function fetchApiVideos(id, key, pages = 10) {
   const list = [], playlist = "UU" + id.slice(2);
   let page = "";
@@ -115,6 +119,100 @@ async function updateSermons() {
     await save("sermons", { updated: new Date().toISOString(), channel, items });
     console.log(`설교: ${items.length}개 저장 (주일 ${items.filter(v => v.type === "sunday").length}, 수요 ${items.filter(v => v.type === "wednesday").length})`);
   } catch (e) { warn(`설교 목록을 가져오지 못했습니다: ${e.message}`); }
+}
+
+// ───────── 영동교회 주일설교 (유튜브 재생목록) ─────────
+// 재생목록 페이지에서 영상 목록을 읽고(키 없이 전부), 올린 날짜는 영상마다 한 번만 확인해 기억해 둠
+function ytJson(html, name) {
+  const i = html.indexOf(name); if (i < 0) return null;
+  const start = html.indexOf("{", i); let depth = 0, inStr = false;
+  for (let j = start; j < html.length; j++) {
+    const ch = html[j];
+    if (inStr) { if (ch === "\\") j++; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true; else if (ch === "{") depth++; else if (ch === "}" && --depth === 0) return JSON.parse(html.slice(start, j + 1));
+  }
+  return null;
+}
+function findAll(o, key, out = []) {
+  if (Array.isArray(o)) o.forEach(v => findAll(v, key, out));
+  else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (k === key) out.push(v); findAll(v, key, out); }
+  return out;
+}
+const textOf = t => t?.simpleText ?? (t?.runs || []).map(r => r.text).join("") ?? t?.content ?? "";
+function playlistEntries(data) {
+  const list = findAll(data, "playlistVideoRenderer").map(r => ({ id: r.videoId, title: textOf(r.title), ok: r.isPlayable !== false }));
+  for (const l of findAll(data, "lockupViewModel")) if (l.contentId && /VIDEO/.test(l.contentType || "")) list.push({ id: l.contentId, title: l.metadata?.lockupMetadataViewModel?.title?.content || "", ok: true });
+  const token = findAll(data, "continuationCommand").map(c => c.token).find(Boolean);
+  return { list, token };
+}
+async function fetchPlaylist(id) {
+  const html = await get(`https://www.youtube.com/playlist?list=${id}&hl=ko&gl=KR`);
+  const data = ytJson(html, "ytInitialData");
+  if (!data) throw new Error("재생목록 내용을 찾지 못했습니다");
+  const title = data.metadata?.playlistMetadataRenderer?.title || textOf(findAll(data, "playlistHeaderRenderer")[0]?.title) || "";
+  const version = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || "2.20241101.00.00";
+  let { list, token } = playlistEntries(data);
+  for (let i = 0; token && i < 30; i++) { // 100개씩 이어서
+    const r = await fetch("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false", {
+      method: "POST", headers: { ...UA, "Content-Type": "application/json" },
+      body: JSON.stringify({ context: { client: { clientName: "WEB", clientVersion: version, hl: "ko", gl: "KR" } }, continuation: token })
+    });
+    if (!r.ok) { warn(`재생목록 다음 쪽을 못 읽음 (${r.status})`); break; }
+    const more = playlistEntries(await r.json());
+    list = list.concat(more.list); token = more.token;
+  }
+  const seen = new Set();
+  return { title, list: list.filter(v => v.id && v.ok && v.title && !seen.has(v.id) && seen.add(v.id)) };
+}
+async function videoDate(id) {
+  const html = await get(`https://www.youtube.com/watch?v=${id}&hl=ko`);
+  const m = html.match(/itemprop="datePublished" content="([^"]+)"/) || html.match(/itemprop="uploadDate" content="([^"]+)"/)
+    || html.match(/"publishDate":"([^"]+)"/) || html.match(/"uploadDate":"([^"]+)"/);
+  if (!m) return "";
+  const d = new Date(m[1]);
+  return isNaN(d) ? "" : d.toISOString();
+}
+async function updateYdSermons() {
+  const c = config.ydSermons; if (!c) return;
+  const old = await readOld("ydsermons");
+  const known = new Map(old.items.map(v => [v.id, v]));
+  const playlists = [], found = new Map();
+  let ok = 0;
+  for (const pl of c.playlists) {
+    try {
+      // 최신 15개는 RSS에 날짜가 있으니 먼저 받아 둠
+      try { for (const v of await fetchRssPlaylist(pl.id)) if (!known.get(v.id)?.published) known.set(v.id, { ...known.get(v.id), published: v.published }); }
+      catch (e) { warn(`영동교회 재생목록 RSS 실패 (${pl.id}): ${e.message}`); }
+      const { title, list } = await fetchPlaylist(pl.id);
+      for (const v of list) if (!found.has(v.id)) found.set(v.id, { ...v, playlist: pl.id });
+      playlists.push({ id: pl.id, label: pl.label || title, title, url: `https://www.youtube.com/playlist?list=${pl.id}` });
+      console.log(`영동교회 설교: 재생목록 "${title}" 영상 ${list.length}개 (예: ${list.slice(0, 2).map(v => v.title).join(" / ")})`);
+      ok++;
+    } catch (e) {
+      warn(`영동교회 재생목록을 가져오지 못했습니다 (${pl.id}): ${e.message}`);
+      for (const v of old.items.filter(v => v.playlist === pl.id)) found.set(v.id, v);
+      const prev = (old.playlists || []).find(x => x.id === pl.id); if (prev) playlists.push(prev);
+    }
+  }
+  if (!ok) return;
+  // 날짜를 모르는 영상만 한 번에 최대 80개씩 확인 (다음 실행 때 나머지)
+  let checked = 0, failed = 0;
+  for (const v of found.values()) {
+    if (known.get(v.id)?.published || checked >= (c.datesPerRun || 80)) continue;
+    checked++;
+    try { const d = await videoDate(v.id); if (d) known.set(v.id, { ...known.get(v.id), published: d }); else failed++; } catch { failed++; }
+  }
+  if (checked) console.log(`영동교회 설교: 올린 날짜 ${checked - failed}/${checked}개 확인`);
+  const items = [...found.values()]
+    .map(v => ({ id: v.id, title: v.title, published: known.get(v.id)?.published || "", playlist: v.playlist }))
+    .filter(v => v.published)
+    .sort((a, b) => b.published.localeCompare(a.published))
+    .slice(0, c.max || 1000);
+  const waiting = found.size - items.length;
+  if (same(items, old.items) && same(playlists, old.playlists)) { console.log("영동교회 설교: 바뀐 것 없음"); return; }
+  await save("ydsermons", { updated: new Date().toISOString(), playlists, items });
+  const years = {}; for (const v of items) years[v.published.slice(0, 4)] = (years[v.published.slice(0, 4)] || 0) + 1;
+  console.log(`영동교회 설교: ${items.length}개 저장 (${Object.entries(years).map(([y, n]) => `${y}년 ${n}`).join(", ")})${waiting ? `, 날짜 확인 대기 ${waiting}개` : ""}`);
 }
 
 // ───────── 네이버 블로그 ─────────
@@ -254,6 +352,7 @@ async function updateSeminar() {
 }
 
 await updateSermons();
+await updateYdSermons();
 await updateBlog();
 await updateClips();
 await updateSeminar();

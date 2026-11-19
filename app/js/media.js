@@ -64,7 +64,20 @@ function sermonParts(raw) {
   return m ? { title: m[1], preacher: m[2].trim() } : { title: t.replace(/\s*\([\d.\s]+\)\s*$/, "") || raw, preacher: "" };
 }
 const SERMON_TYPES = { all: "전체", sunday: "주일설교", wednesday: "수요설교" };
+// 교회 고르기: 서울중앙교회(채널 전체) / 영동교회(주일설교 재생목록)
+const SERMON_CHURCHES = { central: "서울중앙교회", yd: "영동교회" };
+const SERMON_SUBTITLES = { central: "서울중앙교회 주일설교와 수요설교를 최신순으로 들어요.", yd: "영동교회 주일설교를 최신순으로 들어요." };
+const YD_PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLQZk6y9PKKgpqid53qSu8NHZjXZ_0f4Td";
+S.sermonChurch = SERMON_CHURCHES[store.get("sermonChurch")] ? store.get("sermonChurch") : "central";
+SUBTITLES.sermon = SERMON_SUBTITLES[S.sermonChurch];
+S.ydShow = 30;
+const churchSeg = () => `<div class="seg church-seg" style="display:flex;margin-bottom:12px">${Object.entries(SERMON_CHURCHES).map(([k, l]) => `<button style="flex:1" class="${S.sermonChurch === k ? "on" : ""}" data-act="sermonChurch" data-c="${k}">${l}</button>`).join("")}</div>`;
+ACT.sermonChurch = t => {
+  S.sermonChurch = t.dataset.c; store.set("sermonChurch", S.sermonChurch);
+  SUBTITLES.sermon = SERMON_SUBTITLES[S.sermonChurch]; S.ydShow = 30; render();
+};
 VIEWS.sermon = async function () {
+  if (S.sermonChurch === "yd") return ydSermonView();
   $("#topActions").innerHTML = `<a class="icon-btn" href="${SERMON_CHANNEL_URL}" target="_blank" rel="noopener" aria-label="유튜브 채널 열기">${ICON("play")}</a>`;
   $("#view").innerHTML = `<p class="muted">설교 목록을 불러오는 중…</p>`;
   let data;
@@ -73,9 +86,9 @@ VIEWS.sermon = async function () {
   const items = (data?.items || []).filter(v => S.sermonType === "all" || v.type === S.sermonType);
   const all = data?.items || [];
   const latest = t => all.find(v => v.type === t);
-  if (!all.length) { $("#view").innerHTML = feedEmpty("아직 설교 목록이 없어요", SERMON_CHANNEL_URL, "유튜브 채널에서 보기"); return; }
+  if (!all.length) { $("#view").innerHTML = churchSeg() + feedEmpty("아직 설교 목록이 없어요", SERMON_CHANNEL_URL, "유튜브 채널에서 보기"); return; }
   const first = items[0];
-  $("#view").innerHTML = `
+  $("#view").innerHTML = `${churchSeg()}
     <div class="tiles">
       ${tile("peach", "play", "최근 주일설교", latest("sunday") ? fmtDate(latest("sunday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("sunday") ? esc(sermonParts(latest("sunday").title).title) : "아직 없어요")}
       ${tile("mint", "play", "최근 수요설교", latest("wednesday") ? fmtDate(latest("wednesday").published.slice(0, 10)).replace(/ \(.\)/, "") : "-", latest("wednesday") ? esc(sermonParts(latest("wednesday").title).title) : "아직 없어요")}
@@ -94,6 +107,40 @@ VIEWS.sermon = async function () {
       </button>`).join("") || `<p class="small muted" style="margin:6px 4px">더 지난 설교는 유튜브 채널에서 볼 수 있어요.</p>`}</div>
     <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${SERMON_CHANNEL_URL}" target="_blank" rel="noopener">유튜브 채널 전체 보기</a></p>`;
 };
+// 영동교회: 연도별로 나눠 보기 (재생목록이 여러 개여도 올린 날짜로 묶음)
+async function ydSermonView() {
+  $("#topActions").innerHTML = `<a class="icon-btn" href="${YD_PLAYLIST_URL}" target="_blank" rel="noopener" aria-label="유튜브 재생목록 열기">${ICON("play")}</a>`;
+  $("#view").innerHTML = `${churchSeg()}<p class="muted">영동교회 설교를 불러오는 중…</p>`;
+  let data;
+  try { data = await loadFeed("ydsermons"); } catch { data = null; }
+  if (S.tab !== "sermon" || S.sermonChurch !== "yd") return;
+  const all = data?.items || [];
+  if (!all.length) { $("#view").innerHTML = churchSeg() + feedEmpty("아직 영동교회 설교 목록이 없어요", YD_PLAYLIST_URL, "유튜브 재생목록에서 보기"); return; }
+  const years = [...new Set(all.map(v => v.published.slice(0, 4)))];
+  if (!years.includes(S.ydYear)) S.ydYear = years[0];
+  const items = all.filter(v => v.published.startsWith(S.ydYear));
+  const first = items[0], pl = data.playlists || [];
+  const sp = v => sermonParts(v.title);
+  $("#view").innerHTML = `${churchSeg()}
+    <div class="chips">${years.map(y => `<button class="chip ${S.ydYear === y ? "on" : ""}" data-act="ydYear" data-y="${y}">${y}년 <small>${all.filter(v => v.published.startsWith(y)).length}</small></button>`).join("")}</div>
+    <button class="card sermon-hero" data-act="sermonPlay" data-feed="ydsermons" data-id="${first.id}">
+      <span class="thumb169"><img src="https://i.ytimg.com/vi/${first.id}/hqdefault.jpg" alt="" loading="lazy"><span class="play-badge">${ICON("play", 26)}</span></span>
+      <span class="sermon-meta"><span class="badge">주일설교</span> <span class="small muted">${fmtFeedDate(first.published)}</span></span>
+      <b class="sermon-title">${esc(sp(first).title)}</b>
+      ${sp(first).preacher ? `<span class="sermon-meta small muted" style="margin-top:0">${esc(sp(first).preacher)}</span>` : ""}
+    </button>
+    ${items.length > 1 ? `<div class="card feed-list">${items.slice(1, S.ydShow).map(v => `
+      <button class="feed-row" data-act="sermonPlay" data-feed="ydsermons" data-id="${v.id}">
+        <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
+        <span class="feed-text"><b>${esc(sp(v).title)}</b><span class="small muted">${fmtFeedDate(v.published)}${sp(v).preacher ? " · " + esc(sp(v).preacher) : ""}</span></span>
+      </button>`).join("")}</div>
+    ${items.length > S.ydShow ? `<p style="text-align:center"><button class="btn" data-act="ydMore">더 보기 (${items.length - S.ydShow}개 더)</button></p>` : ""}` : ""}
+    <div class="card feed-list">${(pl.length ? pl : [{ label: "주일설교 (영동교회)", url: YD_PLAYLIST_URL }]).map(p => `
+      <a class="feed-row" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="t-ic">${ICON("play", 20)}</span><span class="feed-text"><b>${esc(p.label)}</b><span class="small muted">유튜브 재생목록 전체 보기</span></span></a>`).join("")}</div>
+    <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨` : ""}</p>`;
+}
+ACT.ydYear = t => { S.ydYear = t.dataset.y; S.ydShow = 30; render(); };
+ACT.ydMore = () => { const y = scrollY; S.ydShow += 30; render(); scrollTo(0, y); };
 ACT.sermonType = t => { S.sermonType = t.dataset.t; render(); };
 // 재생 화면: 설교(sermons)와 조각설교(clips)가 함께 씀
 ACT.sermonPlay = async t => {
@@ -102,7 +149,7 @@ ACT.sermonPlay = async t => {
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
   const sp = feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
-  const label = feed === "clips" ? CLIP_TYPES[v.type] : SERMON_TYPES[v.type];
+  const label = feed === "clips" ? CLIP_TYPES[v.type] : feed === "ydsermons" ? "영동교회 주일설교" : SERMON_TYPES[v.type];
   openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
     <p class="small muted" style="margin:10px 2px"><span class="badge">${label}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>

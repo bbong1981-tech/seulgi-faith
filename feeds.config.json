@@ -77,5 +77,16 @@
   "seminar": {
     "url": "https://church.jbch.org/newsnotice/church_sche_seminar/seminar.php?flag=1&chId=58",
     "title": "영동교회 성경강연회 연간 일정"
+  },
+  "ydSermons": {
+    "name": "영동교회",
+    "playlists": [
+      {
+        "id": "PLQZk6y9PKKgpqid53qSu8NHZjXZ_0f4Td",
+        "label": "2026년 주일설교"
+      }
+    ],
+    "datesPerRun": 80,
+    "max": 1000
   }
 }
