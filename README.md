@@ -97,7 +97,7 @@ app/
   js/vendor/anthropic-sdk.js  Anthropic 공식 JS SDK 1.1.0 (번들)
   data/ko/1~66.js  개역한글 본문 (장별 절 배열), psalm-titles.js 시편 표제
   data/en/1~66.js  KJV 본문
-  icons/         앱 아이콘(icon-192/512-v2, apple-touch-icon-v2), 파비콘(favicon-v2.*), 알림 배지(badge-96-v2), 바로가기 아이콘(shortcut-*-v2), 원본 app-icon-v2.svg
+  icons/         앱 아이콘(icon-192/512-v2, apple-touch-icon-v3), 파비콘(favicon-v2.*), 알림 배지(badge-96-v2), 바로가기 아이콘(shortcut-*-v2), 원본 app-icon-v3.svg
                  (아이콘을 바꿀 때는 파일 이름의 v2를 v3처럼 올려야 이미 설치한 휴대폰에서도 새 아이콘을 받아 갑니다)
 ```
 

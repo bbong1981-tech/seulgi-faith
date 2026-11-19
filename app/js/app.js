@@ -1028,8 +1028,8 @@ async function notify(title, body, tag) {
   if ("Notification" in window && Notification.permission === "granted") {
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
-      if (reg) { await reg.showNotification(title, { body, tag, icon: "icons/icon-192-v2.png", badge: "icons/badge-96-v2.png", vibrate: [200, 100, 200], requireInteraction: true }); shown = true; }
-      else { new Notification(title, { body, tag, icon: "icons/icon-192-v2.png" }); shown = true; }
+      if (reg) { await reg.showNotification(title, { body, tag, icon: "icons/icon-192-v3.png", badge: "icons/badge-96-v2.png", vibrate: [200, 100, 200], requireInteraction: true }); shown = true; }
+      else { new Notification(title, { body, tag, icon: "icons/icon-192-v3.png" }); shown = true; }
     } catch { }
   }
   if (document.visibilityState === "visible") {
