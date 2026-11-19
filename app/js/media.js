@@ -154,8 +154,8 @@ ACT.sermonPlay = async t => {
   const data = await loadFeed(feed).catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
-  const sp = feed === "ydsermons" ? ydParts(v) : feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
-  const label = feed === "clips" ? CLIP_TYPES[v.type] : feed === "ydsermons" ? "영동교회 주일설교" : SERMON_TYPES[v.type];
+  const sp = feed === "praise" ? { title: v.title, preacher: "" } : feed === "ydsermons" ? ydParts(v) : feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
+  const label = feed === "praise" ? v.artist : feed === "clips" ? CLIP_TYPES[v.type] : feed === "ydsermons" ? "영동교회 주일설교" : SERMON_TYPES[v.type];
   openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
     <p class="small muted" style="margin:10px 2px"><span class="badge">${label}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
@@ -290,5 +290,5 @@ VIEWS.invite = function () {
 };
 
 // 바로가기(./?tab=sermon 등)로 열었을 때
-if (["sermon", "blog", "clips", "invite"].includes(S.tab)) render();
+if (["sermon", "blog", "clips", "invite", "hymn"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
 else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움

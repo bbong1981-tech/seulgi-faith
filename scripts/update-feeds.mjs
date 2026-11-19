@@ -267,7 +267,7 @@ async function updatePraise() {
           if (prevP) { out.playlists.push(prevP); items.push(...old.items.filter(v => v.playlist === pl.id && v.artist === a.name)); }
         }
       }
-      if (a.channel) out.playlists.sort((x, y) => (parseInt(x.title.match(/(\d+)\s*집/)?.[1]) || 0) - (parseInt(y.title.match(/(\d+)\s*집/)?.[1]) || 0));
+      if (a.channel) out.playlists.sort((x, y) => (parseInt(x.title.match(/(\d+)\s*집/)?.[1]) || 0) - (parseInt(y.title.match(/(\d+)\s*집/)?.[1]) || 0) || x.title.localeCompare(y.title, "ko"));
       if (out.playlists.length) artists.push(out);
     } catch (e) {
       warn(`찬양을 가져오지 못했습니다 (${a.name}): ${e.message}`);

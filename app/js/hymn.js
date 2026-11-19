@@ -1,6 +1,6 @@
 "use strict";
 /* ============================================================
-   찬양 — 통일찬송가 · 은혜찬송가 · 내 찬양을 장별로 보기
+   찬양 — 가수별 유튜브 찬양(GitHub Actions가 모은 feeds/praise) + 내 찬양 노트
    찬송가 가사와 악보는 저작권이 있어 앱에 넣지 않았습니다.
    가지고 있는 찬송가의 악보 사진과 가사를 장별로 등록해서 봅니다.
    - 목록(번호·제목·가사): localStorage "hymns"
@@ -9,8 +9,9 @@
 
 const HYMN_BOOKS = { tongil: "통일찬송가", eunhye: "은혜찬송가", mine: "내 찬양" };
 TITLES.hymn = "찬양";
-SUBTITLES.hymn = "찬송가를 장별로 찾아 악보와 가사를 함께 봐요.";
+SUBTITLES.hymn = "찬양 가수별로 노래를 골라 유튜브로 들어요.";
 S.hymnBook = store.get("hymnBook", "tongil");
+S.praiseTab = store.get("praiseTab", ""); S.praisePl = "all"; S.praiseShow = 50;
 S.hymnQ = "";
 
 // ───────── 악보 이미지 저장소 (IndexedDB) ─────────
@@ -83,39 +84,80 @@ function webCard(q) {
 }
 
 // ───────── 목록 화면 ─────────
-VIEWS.hymn = function () {
-  $("#topActions").innerHTML = `<button class="icon-btn" data-act="hymnMenu" aria-label="찬양 관리">${ICON("upload")}</button><button class="icon-btn" data-act="hymnNew" aria-label="찬양 추가">${ICON("plus")}</button>`;
-  const all = hymns();
-  const count = b => all.filter(h => h.book === b).length;
-  const favs = all.filter(h => h.fav).length;
-  const recent = store.get("hymnRecent", []).map(id => all.find(h => h.id === id)).filter(Boolean)[0];
-  $("#view").innerHTML = `
-    <div class="tiles">
-      ${tile("peach", "music", "통일찬송가", count("tongil"), "등록한 장", "장")}
-      ${tile("mint", "music", "은혜찬송가", count("eunhye"), "등록한 장", "장")}
-      ${tile("butter", "star", "즐겨찾기", favs, "자주 부르는 찬양", "곡")}
-      ${tile("sky", "repeat", "최근에 본 찬양", recent ? recent.no || "-" : "-", recent ? esc(recent.title) : "아직 없어요", recent && recent.no ? "장" : "")}
+// ───────── 가수별 찬양 (유튜브) ─────────
+VIEWS.hymn = async function () {
+  let data = null;
+  if (S.praiseTab !== "mine") {
+    $("#view").innerHTML = `<p class="muted">찬양 목록을 불러오는 중…</p>`;
+    try { data = await loadFeed("praise"); } catch { data = null; }
+    if (S.tab !== "hymn") return;
+  } else { try { data = await loadFeed("praise"); } catch { } }
+  const artists = data?.artists || [];
+  if (S.praiseTab !== "mine" && !artists.some(a => a.name === S.praiseTab)) S.praiseTab = artists[0]?.name || "mine";
+  const tabs = `<div class="chips praise-tabs">${[...artists.map(a => [a.name, a.name]), ["mine", "내 찬양"]].map(([k, l]) => `<button class="chip ${S.praiseTab === k ? "on" : ""}" data-act="praiseTab" data-k="${esc(k)}">${esc(l)}</button>`).join("")}</div>`;
+  if (S.praiseTab === "mine") return myHymnView(tabs);
+  const a = artists.find(x => x.name === S.praiseTab);
+  $("#topActions").innerHTML = `<a class="icon-btn" href="${esc(a.url)}" target="_blank" rel="noopener" aria-label="유튜브에서 보기">${ICON("play")}</a>`;
+  if (a.playlists.length < 2) S.praisePl = "all";
+  else if (S.praisePl !== "all" && !a.playlists.some(p => p.id === S.praisePl)) S.praisePl = "all";
+  const songs = data.items.filter(v => v.artist === a.name && (S.praisePl === "all" || v.playlist === S.praisePl));
+  const listId = S.praisePl !== "all" ? S.praisePl : a.playlists.length === 1 ? a.playlists[0].id : "";
+  const plName = id => a.playlists.find(p => p.id === id)?.title || "";
+  $("#view").innerHTML = `${tabs}
+    ${a.playlists.length > 1 ? `<div class="chips">${[["all", `전체 ${data.items.filter(v => v.artist === a.name).length}`], ...a.playlists.map(p => [p.id, `${p.title} ${p.count}`])].map(([k, l]) => `<button class="chip sm ${S.praisePl === k ? "on" : ""}" data-act="praisePl" data-p="${esc(k)}">${esc(l)}</button>`).join("")}</div>` : ""}
+    <div class="card praise-head">
+      <span class="t-ic">${ICON("music", 22)}</span>
+      <span class="invite-text"><b class="display">${esc(a.name)}${listId && a.playlists.length > 1 ? ` · ${esc(plName(listId))}` : ""}</b><span class="small muted">${songs.length}곡${listId ? " · 이어서 듣기" : " · 앨범을 고르면 이어서 들을 수 있어요"}</span></span>
+      ${listId ? `<button class="btn sm primary" data-act="praiseAll" data-p="${esc(listId)}">${ICON("play", 14)} 전체 듣기</button>` : ""}
     </div>
-    <div class="seg" style="display:flex;margin-bottom:12px">${Object.entries(HYMN_BOOKS).map(([k, l]) => `<button style="flex:1" class="${S.hymnBook === k ? "on" : ""}" data-act="hymnBook" data-b="${k}">${l}</button>`).join("")}</div>
+    <div class="card feed-list">${songs.slice(0, S.praiseShow).map(v => `
+      <button class="feed-row" data-act="sermonPlay" data-feed="praise" data-id="${v.id}">
+        <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
+        <span class="feed-text"><b>${esc(v.title)}</b><span class="small muted">${esc(a.playlists.length > 1 ? plName(v.playlist) : a.name)}</span></span>
+      </button>`).join("")}</div>
+    ${songs.length > S.praiseShow ? `<p style="text-align:center"><button class="btn" data-act="praiseMore">더 보기 (${songs.length - S.praiseShow}곡 더)</button></p>` : ""}
+    <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${esc(a.url)}" target="_blank" rel="noopener">유튜브에서 보기</a></p>`;
+};
+ACT.praiseTab = t => { S.praiseTab = t.dataset.k; store.set("praiseTab", S.praiseTab); S.praisePl = "all"; S.praiseShow = 50; S.hymnQ = ""; render(); };
+ACT.praisePl = t => { S.praisePl = t.dataset.p; S.praiseShow = 50; render(); };
+ACT.praiseMore = () => { const y = scrollY; S.praiseShow += 50; render(); scrollTo(0, y); };
+// 재생목록 전체를 이어서 재생
+ACT.praiseAll = async t => {
+  const data = await loadFeed("praise").catch(() => null);
+  const a = data?.artists.find(x => x.playlists.some(p => p.id === t.dataset.p));
+  const p = a?.playlists.find(x => x.id === t.dataset.p); if (!p) return;
+  openSheet(`${sheetHead(esc(a.playlists.length > 1 ? `${a.name} · ${p.title}` : a.name))}
+    <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(p.id)}&rel=0&playsinline=1" title="${esc(p.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+    <p class="small muted" style="margin:10px 2px">${p.count}곡을 차례로 들어요.</p>
+    <div class="row wrap"><a class="btn" href="https://www.youtube.com/playlist?list=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a></div>`);
+};
+
+// ───────── 내 찬양 (직접 저장한 가사·악보) ─────────
+function myHymnView(tabs) {
+  S.hymnBook = "mine";
+  $("#topActions").innerHTML = `<button class="icon-btn" data-act="hymnMenu" aria-label="찬양 관리">${ICON("upload")}</button><button class="icon-btn" data-act="hymnNew" aria-label="찬양 추가">${ICON("plus")}</button>`;
+  $("#view").innerHTML = `${tabs}
     <div class="searchbar">
-      <input type="search" id="hq" placeholder="장 번호나 제목, 가사로 찾기 (예: 405, 내 주를 가까이)" value="${esc(S.hymnQ)}" data-input="hymnQ" inputmode="search">
+      <input type="search" id="hq" placeholder="번호나 제목, 가사로 찾기" value="${esc(S.hymnQ)}" data-input="hymnQ" inputmode="search">
     </div>
     <div class="row" style="margin:-2px 2px 10px"><label class="small row muted"><input type="checkbox" id="hFav" data-change="hymnFavOnly" ${S.hymnFav ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--accent)"> 즐겨찾기만</label></div>
     <div id="hlist"></div>`;
   hymnList();
-};
+}
 function hymnList() {
   const q = S.hymnQ.trim().toLowerCase();
-  let list = bookHymns(S.hymnBook);
+  const order = Object.keys(HYMN_BOOKS);
+  const allSaved = () => hymns().sort((a, b) => order.indexOf(a.book) - order.indexOf(b.book) || a.no - b.no || a.title.localeCompare(b.title, "ko"));
+  let list = allSaved();
   if (S.hymnFav) list = list.filter(h => h.fav);
   if (q) list = /^\d+$/.test(q) ? list.filter(h => String(h.no).startsWith(q)) : list.filter(h => [h.title, h.lyrics, h.memo].join(" ").toLowerCase().includes(q));
   const el = $("#hlist");
   if (!list.length) {
-    const none = !bookHymns(S.hymnBook).length;
+    const none = !allSaved().length;
     el.innerHTML = none ? `<div class="card hymn-empty">
         ${MASCOT(110)}
-        <h3>${HYMN_BOOKS[S.hymnBook]}를 채워 보세요</h3>
-        <p class="small muted">찬송가 가사와 악보는 저작권 때문에 앱에 미리 넣어 두지 못했습니다. <b>위 검색창에 장 번호나 제목을 넣으면 웹에서 가사를 바로 찾아볼 수 있어요.</b> 찾은 가사나 가지고 있는 찬송가의 악보 사진을 장별로 저장해 두면, 다음부터는 번호만 눌러 바로 볼 수 있습니다.</p>
+        <h3>내 찬양 노트를 채워 보세요</h3>
+        <p class="small muted">자주 부르는 찬양의 가사나 악보 사진을 저장해 두면, 다음부터는 바로 볼 수 있어요. <b>위 검색창에 제목을 넣으면 웹에서 가사를 찾아볼 수도 있어요.</b></p>
         <div class="row wrap" style="justify-content:center">
           <button class="btn primary" data-act="hymnNew">${ICON("camera", 16)} 한 장씩 등록</button>
           <button class="btn" data-act="hymnBulk">여러 장 한 번에 등록</button>
@@ -127,7 +169,7 @@ function hymnList() {
   el.innerHTML = `<div class="card hymn-list">${list.map(h => `
     <div class="hymn-row" data-act="hymnOpen" data-id="${h.id}">
       <span class="hno">${h.no || "·"}</span>
-      <span class="htitle"><b>${h.title ? esc(h.title) : `<span class="muted">제목 없음</span>`}</b><span class="small muted">${h.pages?.length ? `악보 ${h.pages.length}쪽` : "악보 없음"}${h.lyrics ? " · 가사" : ""}</span></span>
+      <span class="htitle"><b>${h.title ? esc(h.title) : `<span class="muted">제목 없음</span>`}</b><span class="small muted">${h.book !== "mine" ? HYMN_BOOKS[h.book] + " · " : ""}${h.pages?.length ? `악보 ${h.pages.length}쪽` : "악보 없음"}${h.lyrics ? " · 가사" : ""}</span></span>
       ${h.fav ? `<span class="hfav">${ICON("star", 18)}</span>` : ""}
     </div>`).join("")}</div>${q ? webCard(S.hymnQ.trim()) : ""}`;
 }
@@ -300,5 +342,4 @@ ACT.hymnImport = async t => {
   } catch { toast("올바른 찬양 백업 파일이 아닙니다"); }
 };
 
-// 바로가기(./?tab=hymn)로 열었을 때
-if (S.tab === "hymn") render();
+// 바로가기(./?tab=hymn)로 열었을 때의 첫 화면은 media.js가 그림 (loadFeed가 그 파일에 있음)

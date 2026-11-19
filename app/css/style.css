@@ -448,6 +448,12 @@ label.field > span.row { display: flex; }
 .invite-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
 @media (min-width: 960px) { .invite-frame { height: calc(100vh - 250px); } }
 
+/* 찬양 (가수별) */
+.praise-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(160deg, var(--butter) 0%, var(--card) 70%); }
+.praise-head .t-ic { width: 42px; height: 42px; border-radius: 14px; background: var(--butter-ic); color: #fff; display: grid; place-items: center; box-shadow: var(--clay-sm); flex-shrink: 0; }
+.praise-head .btn { flex-shrink: 0; }
+.chip.sm { font-size: 13px; padding: 6px 12px; }
+
 /* 교제 · 방명록 */
 .ksm-card { display: flex; align-items: center; gap: 12px; padding: 14px; text-decoration: none; color: inherit; background: linear-gradient(160deg, var(--mint) 0%, var(--card) 70%); }
 .ksm-card .t-ic { width: 46px; height: 46px; border-radius: 16px; background: var(--mint-ic); color: #fff; display: grid; place-items: center; box-shadow: var(--clay-sm); flex-shrink: 0; }
