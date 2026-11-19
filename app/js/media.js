@@ -64,11 +64,11 @@ function sermonParts(raw) {
   return m ? { title: m[1], preacher: m[2].trim() } : { title: t.replace(/\s*\([\d.\s]+\)\s*$/, "") || raw, preacher: "" };
 }
 const SERMON_TYPES = { all: "전체", sunday: "주일설교", wednesday: "수요설교" };
-// 교회 고르기: 서울중앙교회(채널 전체) / 영동교회(주일설교 재생목록)
-const SERMON_CHURCHES = { central: "서울중앙교회", yd: "영동교회" };
+// 교회 고르기: 영동교회(주일설교 재생목록) / 서울중앙교회(채널 전체)
+const SERMON_CHURCHES = { yd: "영동교회", central: "서울중앙교회" };
 const SERMON_SUBTITLES = { central: "서울중앙교회 주일설교와 수요설교를 최신순으로 들어요.", yd: "영동교회 주일설교를 최신순으로 들어요." };
 const YD_PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLQZk6y9PKKgpqid53qSu8NHZjXZ_0f4Td";
-S.sermonChurch = SERMON_CHURCHES[store.get("sermonChurch")] ? store.get("sermonChurch") : "central";
+S.sermonChurch = SERMON_CHURCHES[store.get("sermonChurch")] ? store.get("sermonChurch") : "yd";
 SUBTITLES.sermon = SERMON_SUBTITLES[S.sermonChurch];
 S.ydShow = 30;
 const churchSeg = () => `<div class="seg church-seg" style="display:flex;margin-bottom:12px">${Object.entries(SERMON_CHURCHES).map(([k, l]) => `<button style="flex:1" class="${S.sermonChurch === k ? "on" : ""}" data-act="sermonChurch" data-c="${k}">${l}</button>`).join("")}</div>`;
