@@ -195,6 +195,11 @@ async function updateYdSermons() {
     }
   }
   if (!ok) return;
+  // 제목 앞의 [2026/11/15] 날짜를 먼저 씀 (예배 날짜)
+  for (const v of found.values()) {
+    const m = v.title.match(/(20\d\d)[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})/);
+    if (m && !known.get(v.id)?.fromTitle) known.set(v.id, { ...known.get(v.id), published: `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}T02:00:00.000Z`, fromTitle: true });
+  }
   // 날짜를 모르는 영상만 한 번에 최대 80개씩 확인 (다음 실행 때 나머지)
   let checked = 0, failed = 0;
   for (const v of found.values()) {
