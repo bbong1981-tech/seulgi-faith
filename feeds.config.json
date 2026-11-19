@@ -92,5 +92,32 @@
     ],
     "datesPerRun": 80,
     "max": 1000
+  },
+  "praise": {
+    "artists": [
+      {
+        "name": "손경민",
+        "playlists": [
+          "PLUe7FqrqXFF8vtoCiGCbIpRSg9Yxwm_5f"
+        ]
+      },
+      {
+        "name": "히즈윌",
+        "channel": "@hiswillccm",
+        "match": "집\\s*[)\\]]?\\s*$|\\d\\s*집"
+      },
+      {
+        "name": "지나",
+        "playlists": [
+          "PLOVg_ifuTXbxvxVY5fInZJM7Rw3faB8Mt"
+        ]
+      },
+      {
+        "name": "은혜찬송가",
+        "playlists": [
+          "PLKmqtaZ34_ZY"
+        ]
+      }
+    ]
   }
 }

@@ -145,24 +145,42 @@ function playlistEntries(data) {
   const token = findAll(data, "continuationCommand").map(c => c.token).find(Boolean);
   return { list, token };
 }
-async function fetchPlaylist(id) {
-  const html = await get(`https://www.youtube.com/playlist?list=${id}&hl=ko&gl=KR`);
+// 유튜브 페이지 + 다음 쪽(100개씩)을 이어 읽기
+async function ytBrowse(url, extract) {
+  const html = await get(url);
   const data = ytJson(html, "ytInitialData");
-  if (!data) throw new Error("재생목록 내용을 찾지 못했습니다");
-  const title = data.metadata?.playlistMetadataRenderer?.title || textOf(findAll(data, "playlistHeaderRenderer")[0]?.title) || "";
+  if (!data) throw new Error("페이지 내용을 찾지 못했습니다");
   const version = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || "2.20241101.00.00";
-  let { list, token } = playlistEntries(data);
-  for (let i = 0; token && i < 30; i++) { // 100개씩 이어서
+  let { list, token } = extract(data);
+  for (let i = 0; token && i < 30; i++) {
     const r = await fetch("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false", {
       method: "POST", headers: { ...UA, "Content-Type": "application/json" },
       body: JSON.stringify({ context: { client: { clientName: "WEB", clientVersion: version, hl: "ko", gl: "KR" } }, continuation: token })
     });
-    if (!r.ok) { warn(`재생목록 다음 쪽을 못 읽음 (${r.status})`); break; }
-    const more = playlistEntries(await r.json());
+    if (!r.ok) { warn(`다음 쪽을 못 읽음 (${r.status})`); break; }
+    const more = extract(await r.json());
     list = list.concat(more.list); token = more.token;
   }
+  return { data, list };
+}
+async function fetchPlaylist(id) {
+  const { data, list } = await ytBrowse(`https://www.youtube.com/playlist?list=${id}&hl=ko&gl=KR`, playlistEntries);
+  const title = data.metadata?.playlistMetadataRenderer?.title || textOf(findAll(data, "playlistHeaderRenderer")[0]?.title)
+    || findAll(data, "pageHeaderViewModel")[0]?.title?.dynamicTextViewModel?.text?.content || "";
   const seen = new Set();
   return { title, list: list.filter(v => v.id && v.ok && v.title && !seen.has(v.id) && seen.add(v.id)) };
+}
+// 채널의 재생목록 목록 (@핸들/playlists)
+function channelPlaylistEntries(data) {
+  const list = findAll(data, "gridPlaylistRenderer").map(r => ({ id: r.playlistId, title: textOf(r.title) }));
+  for (const l of findAll(data, "lockupViewModel")) if (l.contentId && /PLAYLIST|ALBUM/.test(l.contentType || "")) list.push({ id: l.contentId, title: l.metadata?.lockupMetadataViewModel?.title?.content || "" });
+  const token = findAll(data, "continuationCommand").map(c => c.token).find(Boolean);
+  return { list, token };
+}
+async function fetchChannelPlaylists(handle) {
+  const { list } = await ytBrowse(`https://www.youtube.com/${encodeURIComponent(handle).replace(/%40/g, "@")}/playlists?hl=ko&gl=KR`, channelPlaylistEntries);
+  const seen = new Set();
+  return list.filter(p => p.id && p.title && !seen.has(p.id) && seen.add(p.id));
 }
 async function videoDate(id) {
   const html = await get(`https://www.youtube.com/watch?v=${id}&hl=ko`);
@@ -218,6 +236,48 @@ async function updateYdSermons() {
   await save("ydsermons", { updated: new Date().toISOString(), playlists, items });
   const years = {}; for (const v of items) years[v.published.slice(0, 4)] = (years[v.published.slice(0, 4)] || 0) + 1;
   console.log(`영동교회 설교: ${items.length}개 저장 (${Object.entries(years).map(([y, n]) => `${y}년 ${n}`).join(", ")})${waiting ? `, 날짜 확인 대기 ${waiting}개` : ""}`);
+}
+
+// ───────── 찬양 (가수별 유튜브 재생목록) ─────────
+async function updatePraise() {
+  const c = config.praise; if (!c) return;
+  const old = await readOld("praise");
+  const artists = [], items = [];
+  for (const a of c.artists) {
+    const prevA = (old.artists || []).find(x => x.name === a.name);
+    try {
+      let pls = (a.playlists || []).map(id => ({ id }));
+      if (a.channel) {
+        const all = await fetchChannelPlaylists(a.channel);
+        const re = new RegExp(a.match || ".");
+        pls = pls.concat(all.filter(p => re.test(p.title)));
+        console.log(`찬양: ${a.name} 채널 재생목록 ${all.length}개 → 고른 것 ${pls.length}개 (${all.map(p => (re.test(p.title) ? "✓" : "✗") + p.title).join(" / ")})`);
+      }
+      const out = { name: a.name, url: a.channel ? `https://www.youtube.com/${a.channel}/playlists` : `https://www.youtube.com/playlist?list=${pls[0]?.id}`, playlists: [] };
+      for (const pl of pls) {
+        try {
+          const { title, list } = await fetchPlaylist(pl.id);
+          if (!list.length) throw new Error("영상이 없습니다");
+          out.playlists.push({ id: pl.id, title: pl.title || title, count: list.length });
+          for (const v of list) items.push({ id: v.id, title: v.title, artist: a.name, playlist: pl.id });
+          console.log(`찬양: ${a.name} "${pl.title || title}" ${list.length}곡`);
+        } catch (e) {
+          warn(`찬양 재생목록을 가져오지 못했습니다 (${a.name}, ${pl.id}): ${e.message}`);
+          const prevP = prevA?.playlists.find(x => x.id === pl.id);
+          if (prevP) { out.playlists.push(prevP); items.push(...old.items.filter(v => v.playlist === pl.id && v.artist === a.name)); }
+        }
+      }
+      if (a.channel) out.playlists.sort((x, y) => (parseInt(x.title.match(/(\d+)\s*집/)?.[1]) || 0) - (parseInt(y.title.match(/(\d+)\s*집/)?.[1]) || 0));
+      if (out.playlists.length) artists.push(out);
+    } catch (e) {
+      warn(`찬양을 가져오지 못했습니다 (${a.name}): ${e.message}`);
+      if (prevA) { artists.push(prevA); items.push(...old.items.filter(v => v.artist === a.name)); }
+    }
+  }
+  if (!artists.length) return;
+  if (same(items, old.items) && same(artists, old.artists)) { console.log("찬양: 바뀐 것 없음"); return; }
+  await save("praise", { updated: new Date().toISOString(), artists, items });
+  console.log(`찬양: ${items.length}곡 저장 (${artists.map(a => `${a.name} ${items.filter(v => v.artist === a.name).length}`).join(", ")})`);
 }
 
 // ───────── 네이버 블로그 ─────────
@@ -358,6 +418,7 @@ async function updateSeminar() {
 
 await updateSermons();
 await updateYdSermons();
+await updatePraise();
 await updateBlog();
 await updateClips();
 await updateSeminar();
