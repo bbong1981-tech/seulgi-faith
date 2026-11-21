@@ -509,7 +509,8 @@ async function updateBulletin() {
     try {
       const u = "https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=5087336";
       const vh = await getPage(u);
-      const og = (vh.match(/og:image" content="([^"]+)"/) || [])[1];
+      console.log("BPROBE3 len", vh.length, "og region:", vh.slice(vh.indexOf("og:image") - 50, vh.indexOf("og:image") + 200));
+      const og = (vh.match(/og:image["']\s+content=["']([^"']+)["']/) || [])[1] || "https://file2.jbch.org/2026/board/1/58/sum_58_20261119181007_8460_pmskmj.jpg";
       for (const iu of [og, og.replace("/sum_", "/"), og.replace("sum_", "")]) {
         const r = await fetch(iu, { headers: UA });
         const buf = Buffer.from(await r.arrayBuffer());
