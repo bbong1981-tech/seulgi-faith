@@ -506,21 +506,21 @@ async function updateChurchEvents() {
 async function updateBulletin() {
   const c = config.bulletin; if (!c) return;
   if (process.env.BUL_PROBE) {
-    try {
-      const xml = await getPage(c.rss);
-      const items = blocks(xml, "item");
-      console.log(`BPROBE rss len=${xml.length} items=${items.length}`);
-      console.log("BPROBE rss head:", xml.slice(0, 600).replace(/\s+/g, " "));
-      for (const it of items.slice(0, 3)) console.log("BPROBE item:", it.replace(/\s+/g, " ").slice(0, 2500));
-      const link = items[0] && (tag(items[0], "link") || tag(items[0], "guid"));
-      if (link) {
-        const vh = await getPage(link);
-        console.log("BPROBE view", link, "len", vh.length, "imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).filter(u => !/icon|logo|btn/i.test(u)).join(" | ").slice(0, 2500));
-        console.log("BPROBE view files:", [...vh.matchAll(/(?:href|onclick)=["']([^"']*(?:down|file|\.pdf|\.jpg|\.png|\.hwp)[^"']*)["']/gi)].map(m => m[1]).join(" | ").slice(0, 1500));
-        const sc = [...vh.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|load|view/i.test(t));
-        console.log("BPROBE view scripts:", sc.join(" ### ").replace(/\s+/g, " ").slice(0, 2500));
-      }
-    } catch (e) { console.log(`BPROBE 실패: ${e.message}`); }
+    const uid = "5087336";
+    for (const u of [`https://church.jbch.org/board/list.php?chId=58&flag=1&uid=${uid}`, `https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${uid}`, `https://church.jbch.org/age/board/list.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${uid}`]) {
+      try {
+        const r = await fetch(u, { headers: UA, redirect: "manual" });
+        const loc = r.headers.get("location");
+        const vh = r.status < 300 ? await r.text() : "";
+        console.log(`BPROBE2 ${u} → ${r.status} ${loc || ""} len ${vh.length}`, vh.length < 600 ? vh.replace(/\s+/g, " ") : "");
+        if (vh.length > 600) {
+          console.log("BPROBE2 imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).filter(x => !/icon|logo|btn|profile/i.test(x)).join(" | ").slice(0, 2500));
+          const i = vh.search(/주일소식지/);
+          console.log("BPROBE2 near:", vh.slice(i, i + 3000).replace(/\s+/g, " "));
+          console.log("BPROBE2 calls:", [...new Set([...vh.matchAll(/(all_loadPost\w*|loadPost\w*|view\w*)\(([^)]*)\)/g)].map(m => m[0]))].slice(0, 20).join(" | "));
+        }
+      } catch (e) { console.log(`BPROBE2 ${u} 실패 ${e.message}`); }
+    }
   }
 }
 
