@@ -507,21 +507,18 @@ async function updateBulletin() {
   const c = config.bulletin; if (!c) return;
   if (process.env.BUL_PROBE) {
     try {
-      const html = await getPage(c.url);
-      const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
-      console.log(`BPROBE len=${html.length} text:`, cellText(body).replace(/\n+/g, " ⏎ ").slice(0, 2500));
-      const links = [...new Set([...html.matchAll(/(?:href|onclick)=["']([^"']*(?:view|read|idx|bbs|board)[^"']*)["']/gi)].map(m => m[1]))];
-      console.log("BPROBE links:", links.slice(0, 40).join(" | "));
-      const i = body.search(/소식지|주보/);
-      console.log("BPROBE html:", body.slice(Math.max(0, i - 500), i + 4000).replace(/\s+/g, " "));
-      const v = links.find(l => /view/i.test(l));
-      if (v) {
-        const u = new URL(v.replace(/^.*?['"]([^'"]+)['"].*$/, "$1"), c.url).href;
-        const vh = await getPage(u);
-        const vb = vh.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
-        console.log("BPROBE view", u, "imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).join(" | ").slice(0, 2500));
-        console.log("BPROBE view text:", cellText(vb).replace(/\n+/g, " ⏎ ").slice(0, 2000));
-        console.log("BPROBE view files:", [...vh.matchAll(/href=["']([^"']*(?:down|file|\.pdf|\.jpg|\.hwp)[^"']*)["']/gi)].map(m => m[1]).join(" | ").slice(0, 1500));
+      const xml = await getPage(c.rss);
+      const items = blocks(xml, "item");
+      console.log(`BPROBE rss len=${xml.length} items=${items.length}`);
+      console.log("BPROBE rss head:", xml.slice(0, 600).replace(/\s+/g, " "));
+      for (const it of items.slice(0, 3)) console.log("BPROBE item:", it.replace(/\s+/g, " ").slice(0, 2500));
+      const link = items[0] && (tag(items[0], "link") || tag(items[0], "guid"));
+      if (link) {
+        const vh = await getPage(link);
+        console.log("BPROBE view", link, "len", vh.length, "imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).filter(u => !/icon|logo|btn/i.test(u)).join(" | ").slice(0, 2500));
+        console.log("BPROBE view files:", [...vh.matchAll(/(?:href|onclick)=["']([^"']*(?:down|file|\.pdf|\.jpg|\.png|\.hwp)[^"']*)["']/gi)].map(m => m[1]).join(" | ").slice(0, 1500));
+        const sc = [...vh.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|load|view/i.test(t));
+        console.log("BPROBE view scripts:", sc.join(" ### ").replace(/\s+/g, " ").slice(0, 2500));
       }
     } catch (e) { console.log(`BPROBE 실패: ${e.message}`); }
   }

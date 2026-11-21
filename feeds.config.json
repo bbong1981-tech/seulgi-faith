@@ -167,6 +167,7 @@
     "playlist": "PLQZk6y9PKKgpaUoan2uBQxN8vbP2Z66eD"
   },
   "bulletin": {
-    "url": "https://church.jbch.org/age/board/list.php?auth_ok=1&flag=1&chId=58&use_kind=1&boardId=13096&page=1&menu_num=4&smenu_num=3&abtype=2&gCode=11157"
+    "url": "https://church.jbch.org/age/board/list.php?auth_ok=1&flag=1&chId=58&use_kind=1&boardId=13096&page=1&menu_num=4&smenu_num=3&abtype=2&gCode=11157",
+    "rss": "https://rss.jbch.org/boardb/1_58_13096.xml"
   }
 }
