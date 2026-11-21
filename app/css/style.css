@@ -491,3 +491,14 @@ label.field > span.row { display: flex; }
 .gb-item:last-child { border-bottom: 0; }
 .gb-item p { margin: 6px 0 0 40px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gb-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--peach); color: var(--accent-deep); display: grid; place-items: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+
+/* 시작 화면 */
+#splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: radial-gradient(circle at 50% 42%, var(--surface, #fbf5ec) 0%, var(--bg) 70%); transition: opacity .55s ease, transform .55s ease; cursor: pointer; padding: 24px; }
+#splash.hide { opacity: 0; transform: scale(1.03); pointer-events: none; }
+.splash-box { text-align: center; display: flex; flex-direction: column; align-items: center; animation: splashIn .7s ease both; }
+.splash-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 10vw, 46px); line-height: 1.15; margin: 0; color: var(--text); letter-spacing: -.5px; }
+.splash-sub { margin: 8px 0 26px; font-size: 13.5px; font-weight: 700; color: var(--muted); letter-spacing: .2px; }
+.splash-lamb { width: 150px; height: 150px; animation: splashBob 2.4s ease-in-out .7s infinite; }
+@keyframes splashIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes splashBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@media (prefers-reduced-motion: reduce) { .splash-box, .splash-lamb { animation: none; } }
