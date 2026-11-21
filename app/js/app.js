@@ -134,6 +134,7 @@ function render() {
   $("#subtitle").textContent = SUBTITLES[S.tab];
   $("#topActions").innerHTML = "";
   VIEWS[S.tab]();
+  renderSelBar(); // 성경에서 고른 절이 있을 때만 아래 막대
   renderSide();
   showActiveTab();
 }
@@ -177,7 +178,7 @@ ACT.quickTheme = t => { S.settings.theme = t.dataset.t; saveSettings(); applyThe
    ============================================================ */
 function openRef(book, chapter, verse) {
   S.settings.ref = { book, chapter }; saveSettings();
-  S.flash = verse || null; S.sel = null;
+  S.flash = verse || null; S.sel = null; S.selVs = [];
   closeSheet(); go("bible");
 }
 
@@ -226,7 +227,7 @@ VIEWS.bible = async function () {
     let html = ptitle ? `<div class="ps-title">${esc(ptitle)}</div>` : "";
     for (let i = 0; i < n; i++) {
       const v = i + 1, hl = hls[`${book}:${chapter}:${v}`];
-      html += `<div class="verse ${hl ? "hl-" + hl : ""}" id="v${v}" data-act="verse" data-v="${v}"><span class="vn">${v}</span>`;
+      html += `<div class="verse ${hl ? "hl-" + hl : ""}${S.selVs.includes(v) ? " sel" : ""}" id="v${v}" data-act="verse" data-v="${v}"><span class="vn">${v}</span>`;
       if (ko) html += esc(ko[i] || "");
       if (en) html += `<span class="en">${esc(en[i] || "")}</span>`;
       if (bms.has(v)) html += `<span class="bm">🔖</span>`;
@@ -253,7 +254,7 @@ function moveChapter(d) {
   chapter += d;
   if (chapter < 1) { if (book === 0) return; book--; chapter = BOOKS[book][3]; }
   else if (chapter > BOOKS[book][3]) { if (book === 65) return; book++; chapter = 1; }
-  S.settings.ref = { book, chapter }; saveSettings(); render(); window.scrollTo(0, 0);
+  S.settings.ref = { book, chapter }; S.selVs = []; saveSettings(); render(); window.scrollTo(0, 0);
 }
 ACT.prevCh = () => moveChapter(-1);
 ACT.nextCh = () => moveChapter(1);
@@ -287,36 +288,64 @@ ACT.pickCh = t => {
 };
 ACT.goCh = t => openRef(Number(t.dataset.b), Number(t.dataset.c));
 
-// 절 선택 메뉴
+// 절 선택: 누를 때마다 선택/해제 (여러 절 가능), 아래 막대에서 복사·형광펜·메모
+S.selVs = [];
+// [16,17,18,20] → "16-18, 20"
+function verseRange(vs) {
+  const out = [];
+  for (let i = 0; i < vs.length; i++) {
+    let j = i; while (j + 1 < vs.length && vs[j + 1] === vs[j] + 1) j++;
+    out.push(j > i ? `${vs[i]}-${vs[j]}` : `${vs[i]}`); i = j;
+  }
+  return out.join(", ");
+}
+const selRef = (short) => { const { book, chapter } = S.settings.ref; return `${BOOKS[book][short ? 1 : 0]} ${chapter}:${verseRange(S.selVs)}`; };
+function renderSelBar() {
+  let bar = $("#selBar");
+  const on = S.tab === "bible" && S.selVs.length > 0;
+  document.body.classList.toggle("has-selbar", on);
+  if (!on) { bar?.remove(); return; }
+  if (!bar) { bar = document.createElement("div"); bar.id = "selBar"; bar.className = "sel-bar"; document.body.appendChild(bar); }
+  bar.innerHTML = `<span class="sel-ref"><b>${esc(selRef())}</b><span class="small muted">${S.selVs.length}절 선택</span></span>
+    <button class="btn sm primary" data-act="copyVerse">📋 복사</button>
+    <button class="btn sm" data-act="verseMenu">더보기</button>
+    <button class="icon-btn sm" data-act="clearSel" aria-label="선택 해제">${ICON("close", 18)}</button>`;
+}
+function clearSel() { S.selVs = []; document.querySelectorAll(".verse.sel").forEach(x => x.classList.remove("sel")); renderSelBar(); }
+ACT.clearSel = clearSel;
 ACT.verse = t => {
-  const v = Number(t.dataset.v), { book, chapter } = S.settings.ref;
-  document.querySelectorAll(".verse.sel").forEach(x => x.classList.remove("sel"));
-  t.classList.add("sel");
-  S.sel = { book, chapter, verse: v };
-  const bm = store.get("bookmarks", []).find(x => x.book === book && x.chapter === chapter && x.verse === v);
-  openSheet(`${sheetHead(`${BOOKS[book][0]} ${chapter}:${v}`)}
-    <div class="section-title" style="margin-top:0">형광펜</div>
+  if (String(getSelection?.() || "").trim()) return; // 글자를 끌어서 고르는 중이면 그대로 둠
+  const v = Number(t.dataset.v);
+  const i = S.selVs.indexOf(v);
+  if (i >= 0) { S.selVs.splice(i, 1); t.classList.remove("sel"); }
+  else { S.selVs.push(v); S.selVs.sort((a, b) => a - b); t.classList.add("sel"); }
+  renderSelBar();
+};
+ACT.verseMenu = () => {
+  const { book, chapter } = S.settings.ref, vs = S.selVs; if (!vs.length) return;
+  const one = vs.length === 1 ? vs[0] : null;
+  S.sel = { book, chapter, verse: vs[0] };
+  const bm = one && store.get("bookmarks", []).find(x => x.book === book && x.chapter === chapter && x.verse === one);
+  openSheet(`${sheetHead(esc(selRef()))}
+    <div class="section-title" style="margin-top:0">형광펜${one ? "" : ` <span class="small muted">(${vs.length}절 모두)</span>`}</div>
     <div class="color-dots">
       ${["yellow", "green", "blue", "pink"].map(c => `<button style="background:var(--hl-${c})" data-act="hl" data-c="${c}" aria-label="${c}"></button>`).join("")}
       <button data-act="hl" data-c="" aria-label="지우기">✕</button>
     </div>
-    <div class="section-title">메모</div>
-    <textarea id="bmNote" placeholder="이 구절에 대한 묵상이나 메모 (북마크와 함께 저장)">${esc(bm?.note || "")}</textarea>
+    ${one ? `<div class="section-title">메모</div>
+    <textarea id="bmNote" placeholder="이 구절에 대한 묵상이나 메모 (북마크와 함께 저장)">${esc(bm?.note || "")}</textarea>` : `<p class="small muted">북마크와 메모는 한 절만 골랐을 때 남길 수 있어요.</p>`}
     <div class="row wrap" style="margin-top:12px">
-      <button class="btn primary" data-act="bookmark">${bm ? "북마크 저장" : "🔖 북마크"}</button>
+      ${one ? `<button class="btn primary" data-act="bookmark">${bm ? "북마크 저장" : "🔖 북마크"}</button>` : ""}
       ${bm ? `<button class="btn danger" data-act="unbookmark">북마크 삭제</button>` : ""}
       <button class="btn" data-act="copyVerse">📋 복사</button>
       <button class="btn" data-act="verseToPrayer">🙏 기도노트에</button>
     </div>`);
 };
-document.getElementById("modal").addEventListener("click", e => {
-  if (e.target.id === "modal") document.querySelectorAll(".verse.sel").forEach(x => x.classList.remove("sel"));
-});
 ACT.hl = t => {
-  const { book, chapter, verse } = S.sel, k = `${book}:${chapter}:${verse}`;
+  const { book, chapter } = S.settings.ref;
   const hls = store.get("highlights", {});
-  if (t.dataset.c) hls[k] = t.dataset.c; else delete hls[k];
-  store.set("highlights", hls); closeSheet(); render(); S.flash = null;
+  for (const v of S.selVs) { const k = `${book}:${chapter}:${v}`; if (t.dataset.c) hls[k] = t.dataset.c; else delete hls[k]; }
+  store.set("highlights", hls); closeSheet(); S.selVs = []; render(); S.flash = null;
 };
 ACT.bookmark = () => {
   const { book, chapter, verse } = S.sel;
@@ -324,28 +353,61 @@ ACT.bookmark = () => {
   const note = $("#bmNote").value.trim();
   const ex = list.find(x => x.book === book && x.chapter === chapter && x.verse === verse);
   if (ex) ex.note = note; else list.unshift({ id: uid(), book, chapter, verse, note, created: todayStr() });
-  store.set("bookmarks", list); closeSheet(); toast("북마크에 저장했습니다"); render();
+  store.set("bookmarks", list); closeSheet(); S.selVs = []; toast("북마크에 저장했습니다"); render();
 };
 ACT.unbookmark = () => {
   const { book, chapter, verse } = S.sel;
   store.set("bookmarks", store.get("bookmarks", []).filter(x => !(x.book === book && x.chapter === chapter && x.verse === verse)));
-  closeSheet(); render();
+  closeSheet(); S.selVs = []; render();
 };
-ACT.copyVerse = async () => {
-  const { book, chapter, verse } = S.sel;
-  const ref = `${BOOKS[book][0]} ${chapter}:${verse}`;
+// 복사할 글: 고른 절 본문(여러 절이면 절 번호와 함께) + 맨 끝에 (책 장:절)
+async function versesCopyText(book, chapter, vs, mode) {
   const parts = [];
-  if (S.settings.mode !== "en") parts.push(await verseText({ book, chapter, verse }, "ko"));
-  if (S.settings.mode !== "ko") parts.push(await verseText({ book, chapter, verse }, "en"));
-  const text = `${parts.join("\n")}\n(${ref})`;
-  try { await navigator.clipboard.writeText(text); toast("복사했습니다"); }
-  catch { prompt("아래 내용을 복사하세요", text); }
+  for (const lang of mode === "both" ? ["ko", "en"] : [mode === "en" ? "en" : "ko"]) {
+    const all = await getVerses(book, chapter, lang);
+    parts.push(vs.map(v => (vs.length > 1 ? `${v} ` : "") + (all[v - 1] || "")).join("\n"));
+  }
+  const ref = `${BOOKS[book][0]} ${chapter}:${verseRange(vs)}`;
+  return `${parts.join("\n\n")}\n(${mode === "en" ? `${BOOKS[book][2]} ${chapter}:${verseRange(vs)}` : ref})`;
+}
+ACT.copyVerse = async () => {
+  const { book, chapter } = S.settings.ref; if (!S.selVs.length) return;
+  const text = await versesCopyText(book, chapter, S.selVs, S.settings.mode);
   closeSheet();
+  try { await navigator.clipboard.writeText(text); toast(`${selRef()} 복사했습니다`); }
+  catch { prompt("아래 내용을 복사하세요", text); }
+  clearSel();
 };
+// 손가락으로 글자를 끌어서 복사해도 책 이름과 장·절이 함께 붙도록
+document.addEventListener("copy", e => {
+  const sel = getSelection(); if (!sel || sel.isCollapsed || S.tab !== "bible") return;
+  const box = $("#verses"); if (!box || !box.contains(sel.anchorNode) || !box.contains(sel.focusNode)) return;
+  const range = sel.getRangeAt(0);
+  const els = [...box.querySelectorAll(".verse")].filter(el => sel.containsNode(el, true));
+  if (!els.length) return;
+  const vs = els.map(el => Number(el.dataset.v));
+  // 절마다 고른 부분만 꺼내 "절번호 본문" 줄로 정리 (영문은 다음 줄)
+  const lines = els.map(el => {
+    const r = document.createRange(); r.selectNodeContents(el);
+    if (range.compareBoundaryPoints(Range.START_TO_START, r) > 0) r.setStart(range.startContainer, range.startOffset);
+    if (range.compareBoundaryPoints(Range.END_TO_END, r) < 0) r.setEnd(range.endContainer, range.endOffset);
+    const f = document.createElement("div"); f.appendChild(r.cloneContents());
+    f.querySelectorAll(".vn, .bm").forEach(x => x.remove());
+    f.querySelectorAll(".en").forEach(x => x.replaceWith("\n" + x.textContent));
+    const t = f.textContent.replace(/[ \t]+/g, " ").trim();
+    return t ? (els.length > 1 ? `${el.dataset.v} ` : "") + t : "";
+  }).filter(Boolean);
+  const { book, chapter } = S.settings.ref;
+  const text = lines.join("\n");
+  const ref = S.settings.mode === "en" ? `${BOOKS[book][2]} ${chapter}:${verseRange(vs)}` : `${BOOKS[book][0]} ${chapter}:${verseRange(vs)}`;
+  e.clipboardData.setData("text/plain", `${text}\n(${ref})`);
+  e.preventDefault();
+});
 ACT.verseToPrayer = () => {
-  const { book, chapter, verse } = S.sel;
-  closeSheet(); S.tab = "prayer"; render();
-  prayerForm(null, `${BOOKS[book][1]} ${chapter}:${verse}`);
+  const { book, chapter } = S.settings.ref, vs = S.selVs;
+  const v = vs.length > 1 && vs[vs.length - 1] - vs[0] === vs.length - 1 ? `${vs[0]}-${vs[vs.length - 1]}` : `${vs[0]}`;
+  closeSheet(); clearSel(); S.tab = "prayer"; render();
+  prayerForm(null, `${BOOKS[book][1]} ${chapter}:${v}`);
 };
 
 // 북마크 목록
