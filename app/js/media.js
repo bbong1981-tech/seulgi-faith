@@ -289,6 +289,102 @@ VIEWS.invite = function () {
     <div class="invite-frame"><iframe src="${INVITE_URL}" title="성경강연회 초대장" loading="lazy" allow="clipboard-write; web-share"></iframe></div>`;
 };
 
+// ───────── 강연회 (영동교회 성경강연회 재생목록 + 연령별 성경강연회) ─────────
+TITLES.lecture = "강연회"; SUBTITLES.lecture = "영동교회와 연령별 성경강연회 말씀을 다시 들어요.";
+const LEC_MODES = { yd: "영동교회 성경강연회", ages: "연령별 성경강연회" };
+const YD_LEC_URL = "https://www.youtube.com/@yeongdong_church/playlists";
+S.lecMode = LEC_MODES[store.get("lecMode")] ? store.get("lecMode") : "yd";
+S.lecAge = store.get("lecAge", "adult"); S.lecGroup = "all";
+// "성경강연회(26.10.26-11.1) 오경연P" → { year: "2026", when: "10월 26일 ~ 11월 1일", speaker: "오경연P" }
+function lecParts(title) {
+  const m = String(title).match(/\(\s*(?:20)?(\d{2})\.(\d{1,2})\.(\d{1,2})\s*[~\-–]\s*(?:(\d{1,2})\.)?(\d{1,2})\s*\)\s*(.*)$/);
+  if (!m) return { year: "", when: title, speaker: "" };
+  const [, y, m1, d1, m2, d2, sp] = m;
+  return { year: "20" + y, when: `${+m1}월 ${+d1}일 ~ ${m2 ? `${+m2}월 ` : ""}${+d2}일`, speaker: sp.trim() };
+}
+const lecSeg = () => `<div class="seg" style="display:flex;margin-bottom:12px">${Object.entries(LEC_MODES).map(([k, l]) => `<button style="flex:1" class="${S.lecMode === k ? "on" : ""}" data-act="lecMode" data-m="${k}">${l}</button>`).join("")}</div>`;
+VIEWS.lecture = async function () {
+  $("#topActions").innerHTML = `<a class="icon-btn" href="${S.lecMode === "yd" ? YD_LEC_URL : (LEC_AGE_URL[S.lecAge] || "https://www.jbch.org/ko/seminar/seminar.php?cId=26")}" target="_blank" rel="noopener" aria-label="원래 페이지 열기">${ICON("play")}</a>`;
+  $("#view").innerHTML = `${lecSeg()}<p class="muted">강연회 목록을 불러오는 중…</p>`;
+  let data;
+  try { data = await loadFeed("lectures"); } catch { data = null; }
+  if (S.tab !== "lecture") return;
+  const body = S.lecMode === "yd" ? lecYdHtml(data?.yd) : lecAgesHtml(data?.ages || []);
+  $("#view").innerHTML = `${lecSeg()}${body}<p class="small muted" style="text-align:center">${data?.updated ? `${agoText(data.updated)}에 업데이트됨` : ""}</p>`;
+};
+const LEC_AGE_URL = {};
+function lecYdHtml(yd) {
+  const pls = yd?.playlists || [];
+  if (!pls.length) return feedEmpty("아직 강연회 목록이 없어요", YD_LEC_URL, "유튜브에서 보기");
+  const byYear = {};
+  for (const p of pls) { const y = lecParts(p.title).year || "그 밖의"; (byYear[y] ||= []).push(p); }
+  return Object.keys(byYear).sort((a, b) => b.localeCompare(a)).map(y => `
+    <div class="section-title">${y}${/^\d+$/.test(y) ? "년" : ""}</div>
+    <div class="card feed-list">${byYear[y].map(p => { const lp = lecParts(p.title); return `
+      <button class="feed-row" data-act="lecPl" data-id="${esc(p.id)}">
+        <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${p.items[0].id}/mqdefault.jpg" alt="" loading="lazy"><span class="thumb-count">${p.items.length}편</span></span>
+        <span class="feed-text"><b>${esc(lp.speaker || p.title)}</b><span class="small muted">${esc(lp.when)}</span></span>
+      </button>`; }).join("")}</div>`).join("");
+}
+function lecAgesHtml(ages) {
+  if (!ages.length) return feedEmpty("아직 강연회 목록이 없어요", "https://www.jbch.org/ko/seminar/seminar.php?cId=26", "홈페이지에서 보기");
+  for (const a of ages) LEC_AGE_URL[a.id] = a.url;
+  const age = ages.find(a => a.id === S.lecAge) || ages[0]; S.lecAge = age.id;
+  if (S.lecGroup !== "all" && !age.groups.some(g => g.cat === S.lecGroup)) S.lecGroup = "all";
+  const groups = age.groups.filter(g => S.lecGroup === "all" || g.cat === S.lecGroup);
+  const short = n => n.length > 18 ? n.slice(0, 17) + "…" : n;
+  return `
+    <div class="chips">${ages.map(a => `<button class="chip ${a.id === age.id ? "on" : ""}" data-act="lecAge" data-a="${a.id}">${esc(a.name)}</button>`).join("")}</div>
+    ${age.groups.length > 1 ? `<div class="chips">${[["all", "모두"], ...age.groups.map(g => [g.cat, short(g.name)])].map(([k, l]) => `<button class="chip sm ${S.lecGroup === k ? "on" : ""}" data-act="lecGroup" data-g="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
+    ${groups.map(g => `
+      <div class="lec-who">${g.pic ? `<img src="${esc(g.pic)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : `<span class="t-ic">${ICON("users", 18)}</span>`}<b>${esc(g.name)}</b><span class="small muted">${g.items.length}편</span></div>
+      <div class="card feed-list">${g.items.map(v => v.yt ? `
+        <button class="feed-row" data-act="lecPlay" data-yt="${esc(v.yt)}" data-t="${esc(v.title)}" data-s="${esc(`${age.name} · ${g.name}`)}">
+          <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${esc(v.yt)}/mqdefault.jpg" alt="" loading="lazy"></span>
+          <span class="feed-text"><b>${esc(v.title)}</b></span>
+        </button>` : `
+        <a class="feed-row" href="https://www.jbch.org/ko/seminar/view.php?psId=${esc(v.psId)}&cId=${esc(g.cat)}" target="_blank" rel="noopener">
+          <span class="feed-text"><b>${esc(v.title)}</b><span class="small muted">홈페이지에서 보기</span></span>
+        </a>`).join("")}</div>`).join("")}`;
+}
+ACT.lecMode = t => { S.lecMode = t.dataset.m; store.set("lecMode", S.lecMode); render(); };
+ACT.lecAge = t => { S.lecAge = t.dataset.a; store.set("lecAge", S.lecAge); S.lecGroup = "all"; render(); };
+ACT.lecGroup = t => { S.lecGroup = t.dataset.g; render(); };
+const ytFrame = src => `<div class="video-box"><iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+ACT.lecPlay = t => {
+  openSheet(`${sheetHead(esc(t.dataset.t))}${ytFrame(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(t.dataset.yt)}?rel=0&playsinline=1`)}
+    <p class="small muted" style="margin:10px 2px">${esc(t.dataset.s)}</p>
+    <div class="row wrap"><a class="btn" href="https://www.youtube.com/watch?v=${encodeURIComponent(t.dataset.yt)}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a></div>`);
+};
+// 영동교회 강연회 한 회: 위에서 재생, 아래 목록에서 골라 듣기 (처음엔 차례로 이어서 재생)
+// 회차 제목 "[2026/10/26] 성경강연회 1일차 (오경연P)" → { t: "성경강연회 1일차", d: "2026-10-26" }
+function lecEp(v) {
+  const m = String(v.title).match(/^\s*\[(\d{4})[/.\-](\d{1,2})[/.\-](\d{1,2})\]\s*/);
+  const t = String(v.title).replace(/^\s*\[[^\]]*\]\s*/, "").replace(/\s*\([^()]*(P|목사)\)\s*$/, "").trim() || v.title;
+  return { id: v.id, t, d: m ? `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` : "" };
+}
+ACT.lecPl = async t => {
+  const data = await loadFeed("lectures").catch(() => null);
+  const p = data?.yd?.playlists.find(x => x.id === t.dataset.id); if (!p) return;
+  const lp = lecParts(p.title);
+  let eps = p.items.map(lecEp);
+  if (eps.every(e => e.d)) eps = eps.sort((a, b) => a.d.localeCompare(b.d)); // 1일차부터
+  const ids = eps.map(e => e.id);
+  openSheet(`${sheetHead(esc(lp.speaker ? `성경강연회 · ${lp.speaker}` : p.title))}
+    <p class="small muted" style="margin:-6px 2px 10px">${esc(lp.year ? `${lp.year}년 ${lp.when}` : "")} · ${eps.length}편 차례로 듣기</p>
+    ${ytFrame(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(ids[0])}?playlist=${encodeURIComponent(ids.slice(1).join(","))}&rel=0&playsinline=1`)}
+    <div class="card feed-list lec-ep" style="margin-top:12px">${eps.map((e, i) => `
+      <button class="feed-row ${i === 0 ? "on" : ""}" data-act="lecEp" data-i="${i}" data-ids="${esc(ids.join(","))}"><span class="hno">${i + 1}</span><span class="feed-text"><b>${esc(e.t)}</b>${e.d ? `<span class="small muted">${fmtFeedDate(e.d + "T12:00:00")}</span>` : ""}</span></button>`).join("")}</div>
+    <div class="row wrap"><a class="btn" href="https://www.youtube.com/playlist?list=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a></div>`);
+};
+ACT.lecEp = t => {
+  const f = document.querySelector(".sheet .video-box iframe"); if (!f) return;
+  const ids = t.dataset.ids.split(","), i = +t.dataset.i; // 고른 회차부터 끝까지 이어서
+  f.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(ids[i])}?playlist=${encodeURIComponent(ids.slice(i + 1).join(","))}&rel=0&playsinline=1&autoplay=1`;
+  document.querySelectorAll(".lec-ep .feed-row").forEach(b => b.classList.toggle("on", b === t));
+  f.scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
 // 바로가기(./?tab=sermon 등)로 열었을 때
-if (["sermon", "blog", "clips", "invite", "hymn"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
+if (["sermon", "blog", "clips", "invite", "hymn", "lecture"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
 else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움
