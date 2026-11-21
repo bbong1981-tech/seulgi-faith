@@ -119,5 +119,48 @@
         ]
       }
     ]
+  },
+  "lectures": {
+    "yd": {
+      "channel": "@yeongdong_church",
+      "match": "성경강연회"
+    },
+    "ages": [
+      {
+        "id": "adult",
+        "name": "성인",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=26"
+      },
+      {
+        "id": "senior",
+        "name": "노인",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=22"
+      },
+      {
+        "id": "youth",
+        "name": "청소년",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=50"
+      },
+      {
+        "id": "kids",
+        "name": "어린이",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=57"
+      },
+      {
+        "id": "deaf",
+        "name": "농인",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=66"
+      },
+      {
+        "id": "blind",
+        "name": "시각장애인",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=132"
+      },
+      {
+        "id": "foreign",
+        "name": "외국인",
+        "url": "https://www.jbch.org/ko/seminar/seminar.php?cId=73"
+      }
+    ]
   }
 }

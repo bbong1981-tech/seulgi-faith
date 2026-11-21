@@ -416,9 +416,53 @@ async function updateSeminar() {
   } catch (e) { warn(`성경강연회 일정을 가져오지 못했습니다: ${e.message}`); }
 }
 
+// ───────── 강연회 (영동교회 유튜브 '성경강연회' 재생목록 + 연령별 강연회 영상) ─────────
+async function updateLectures() {
+  const c = config.lectures; if (!c) return;
+  const old = await readOld("lectures");
+  let yd = old.yd || null;
+  try {
+    const all = await fetchChannelPlaylists(c.yd.channel);
+    const re = new RegExp(c.yd.match);
+    const picked = all.filter(p => re.test(p.title));
+    console.log(`강연회: ${c.yd.channel} 재생목록 ${all.length}개 → 고른 것 ${picked.length}개 (${all.map(p => (re.test(p.title) ? "✓" : "✗") + p.title).join(" / ")})`);
+    const playlists = [];
+    for (const pl of picked) {
+      try {
+        const { list } = await fetchPlaylist(pl.id);
+        if (!list.length) continue;
+        playlists.push({ id: pl.id, title: pl.title, items: list.map(v => ({ id: v.id, title: v.title })) });
+        console.log(`강연회: "${pl.title}" ${list.length}개`);
+      } catch (e) {
+        warn(`강연회 재생목록을 가져오지 못했습니다 (${pl.title}): ${e.message}`);
+        const prev = old.yd?.playlists.find(x => x.id === pl.id); if (prev) playlists.push(prev);
+      }
+    }
+    if (playlists.length) yd = { url: `https://www.youtube.com/${c.yd.channel}/playlists`, playlists };
+  } catch (e) { warn(`영동교회 강연회 재생목록을 가져오지 못했습니다: ${e.message}`); }
+  if (process.env.LECTURE_PROBE) {
+    for (const g of c.ages.slice(0, 2)) {
+      try {
+        const html = await getPage(g.url);
+        const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
+        console.log(`PROBE ${g.name} len=${html.length}`);
+        console.log("PROBE text:", cellText(body).replace(/\n+/g, " ⏎ ").slice(0, 2500));
+        const i = body.search(/목사/);
+        console.log("PROBE html near 목사:", body.slice(Math.max(0, i - 2500), i + 1500).replace(/\s+/g, " "));
+        console.log("PROBE links:", [...new Set([...html.matchAll(/href="([^"]*(seminar|view|youtu)[^"]*)"/gi)].map(m => m[1]))].slice(0, 40).join(" | "));
+        console.log("PROBE paging:", [...new Set([...html.matchAll(/href="([^"]*page=\d+[^"]*)"/gi)].map(m => m[1]))].slice(0, 20).join(" | "));
+      } catch (e) { console.log(`PROBE ${g.name} 실패: ${e.message}`); }
+    }
+  }
+  const out = { yd, ages: old.ages || [] };
+  if (same(out.yd, old.yd) && same(out.ages, old.ages)) { console.log("강연회: 바뀐 것 없음"); return; }
+  await save("lectures", { updated: new Date().toISOString(), ...out });
+}
+
 await updateSermons();
 await updateYdSermons();
 await updatePraise();
 await updateBlog();
 await updateClips();
 await updateSeminar();
+await updateLectures();
