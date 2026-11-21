@@ -441,18 +441,17 @@ async function updateLectures() {
     if (playlists.length) yd = { url: `https://www.youtube.com/${c.yd.channel}/playlists`, playlists };
   } catch (e) { warn(`영동교회 강연회 재생목록을 가져오지 못했습니다: ${e.message}`); }
   if (process.env.LECTURE_PROBE) {
-    for (const g of c.ages.slice(0, 2)) {
-      try {
-        const html = await getPage(g.url);
-        const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
-        console.log(`PROBE ${g.name} len=${html.length}`);
-        console.log("PROBE text:", cellText(body).replace(/\n+/g, " ⏎ ").slice(0, 2500));
-        const i = body.search(/목사/);
-        console.log("PROBE html near 목사:", body.slice(Math.max(0, i - 2500), i + 1500).replace(/\s+/g, " "));
-        console.log("PROBE links:", [...new Set([...html.matchAll(/href="([^"]*(seminar|view|youtu)[^"]*)"/gi)].map(m => m[1]))].slice(0, 40).join(" | "));
-        console.log("PROBE paging:", [...new Set([...html.matchAll(/href="([^"]*page=\d+[^"]*)"/gi)].map(m => m[1]))].slice(0, 20).join(" | "));
-      } catch (e) { console.log(`PROBE ${g.name} 실패: ${e.message}`); }
-    }
+    try {
+      const html = await getPage("https://www.jbch.org/ko/seminar/seminar.php?cId=26&catId=27");
+      const body = html.replace(/<style[\s\S]*?<\/style>/gi, "");
+      console.log(`PROBE2 len=${html.length}`);
+      const i = body.indexOf("책으로 보기");
+      console.log("PROBE2 main html:", body.slice(i, i + 6000).replace(/\s+/g, " "));
+      console.log("PROBE2 yt:", [...new Set([...html.matchAll(/(?:youtu\.be\/|embed\/|v=|vid=|data-yt[^=]*=["'])([\w-]{11})/g)].map(m => m[1]))].slice(0, 30).join(","));
+      console.log("PROBE2 ajax:", [...new Set([...html.matchAll(/["']([^"'\s]*\.php[^"'\s]*)["']/g)].map(m => m[1]))].filter(u => !/login|msg\./.test(u)).slice(0, 60).join(" | "));
+      const scripts = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|load|seminar|fetch|\$\.(get|post)/i.test(t));
+      console.log("PROBE2 scripts:", scripts.join(" ##### ").replace(/\s+/g, " ").slice(0, 5000));
+    } catch (e) { console.log(`PROBE2 실패: ${e.message}`); }
   }
   const out = { yd, ages: old.ages || [] };
   if (same(out.yd, old.yd) && same(out.ages, old.ages)) { console.log("강연회: 바뀐 것 없음"); return; }
