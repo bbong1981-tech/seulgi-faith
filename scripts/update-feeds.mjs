@@ -440,28 +440,36 @@ async function updateLectures() {
     }
     if (playlists.length) yd = { url: `https://www.youtube.com/${c.yd.channel}/playlists`, playlists };
   } catch (e) { warn(`영동교회 강연회 재생목록을 가져오지 못했습니다: ${e.message}`); }
-  if (process.env.LECTURE_PROBE) {
+  // 연령별 강연회: 페이지에 강사(목사님)별 칸이 있고, 각 칸의 영상 목록은 process.php가 JSON으로 줌
+  const ages = [];
+  for (const g of c.ages) {
+    const prev = (old.ages || []).find(x => x.id === g.id);
     try {
-      for (const cat of [27, 23, 52]) {
-        const r = await fetch("https://www.jbch.org/common/inc/process.php", { method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: `mode=loadSeminar&cId=${cat}` });
-        const t = await r.text();
-        console.log(`PROBE4 cat ${cat} status ${r.status} len ${t.length}:`, t.slice(0, 1500).replace(/\s+/g, " "));
-        let d; try { d = JSON.parse(t); } catch { continue; }
-        console.log(`PROBE4 cat ${cat} count ${d.length} keys ${Object.keys(d[0] || {}).join(",")} titles:`, d.map(x => `${x.title}[${x.defaultVideo}:${x.youtubeLink}]`).join(" / ").slice(0, 2500));
-        if (cat === 27 && d[0]) {
-          const vu = `https://www.jbch.org/ko/seminar/view.php?psId=${d[0].psId}&cId=${d[0].cId}`;
-          const html = await getPage(vu);
-          const body = html.replace(/<style[\s\S]*?<\/style>/gi, "");
-          const i = body.indexOf("END Hero");
-          console.log("PROBE4 view:", vu, body.slice(i, i + 5000).replace(/\s+/g, " "));
-          console.log("PROBE4 view yt:", [...new Set([...html.matchAll(/(?:youtu\.be\/|embed\/|vi\/|v=)([\w-]{11})/g)].map(m => m[1]))].join(","));
-          const sc = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|youtube|video|load/i.test(t));
-          console.log("PROBE4 view scripts:", sc.join(" ##### ").replace(/\s+/g, " ").slice(0, 3000));
+      const html = await getPage(g.url);
+      const sec = html.slice(html.indexOf("card-group-about"), html.indexOf("card-group-content"));
+      const cats = [...sec.matchAll(/loadSeminar\((\d+)\)[\s\S]*?<img src='([^']*)'[\s\S]*?class='h7[^']*'>([\s\S]*?)<\/div>/g)]
+        .map(m => ({ cat: m[1], pic: m[2], name: cellText(m[3]).replace(/(\S)목사$/, "$1 목사") }));
+      if (!cats.length) throw new Error("강사 목록을 찾지 못했습니다");
+      const groups = [];
+      for (const k of cats) {
+        try {
+          const r = await fetch("https://www.jbch.org/common/inc/process.php", { method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: `mode=loadSeminar&cId=${k.cat}` });
+          if (!r.ok) throw new Error(`${r.status}`);
+          const list = (await r.json()).map(x => ({ psId: x.psId, title: decode(String(x.title || "")).trim(), yt: x.defaultVideo == 3 ? "" : (x.youtubeLink || "") })).filter(x => x.title);
+          if (list.length) groups.push({ ...k, items: list });
+        } catch (e) {
+          warn(`강연회 영상 목록 실패 (${g.name} ${k.name}): ${e.message}`);
+          const pg = prev?.groups.find(x => x.cat === k.cat); if (pg) groups.push(pg);
         }
       }
-    } catch (e) { console.log(`PROBE4 실패: ${e.message}`); }
+      ages.push({ id: g.id, name: g.name, url: g.url, groups });
+      console.log(`강연회: ${g.name} — ${groups.map(x => `${x.name} ${x.items.length}`).join(", ")}`);
+    } catch (e) {
+      warn(`연령별 강연회를 가져오지 못했습니다 (${g.name}): ${e.message}`);
+      if (prev) ages.push(prev);
+    }
   }
-  const out = { yd, ages: old.ages || [] };
+  const out = { yd, ages: ages.length ? ages : old.ages || [] };
   if (same(out.yd, old.yd) && same(out.ages, old.ages)) { console.log("강연회: 바뀐 것 없음"); return; }
   await save("lectures", { updated: new Date().toISOString(), ...out });
 }
