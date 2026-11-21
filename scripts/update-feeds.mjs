@@ -168,7 +168,14 @@ async function fetchPlaylist(id) {
   const title = data.metadata?.playlistMetadataRenderer?.title || textOf(findAll(data, "playlistHeaderRenderer")[0]?.title)
     || findAll(data, "pageHeaderViewModel")[0]?.title?.dynamicTextViewModel?.text?.content || "";
   const seen = new Set();
-  return { title, list: list.filter(v => v.id && v.ok && v.title && !seen.has(v.id) && seen.add(v.id)) };
+  const out = list.filter(v => v.id && v.ok && v.title && !seen.has(v.id) && seen.add(v.id));
+  if (!out.length && process.env.PL_PROBE) { // 임시 점검
+    const names = {}; (function w(o) { if (Array.isArray(o)) o.forEach(w); else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (/Renderer$|ViewModel$/.test(k)) names[k] = (names[k] || 0) + 1; w(v); } })(data);
+    console.log(`PLPROBE ${id} raw ${list.length} names:`, JSON.stringify(names));
+    console.log(`PLPROBE ${id} alerts:`, JSON.stringify(findAll(data, "alertRenderer")).slice(0, 800), JSON.stringify(findAll(data, "lockupViewModel")[0] || {}).slice(0, 1500));
+    console.log(`PLPROBE ${id} pvr:`, JSON.stringify(findAll(data, "playlistVideoRenderer")[0] || {}).slice(0, 1200));
+  }
+  return { title, list: out };
 }
 // 채널의 재생목록 목록 (@핸들/playlists)
 function channelPlaylistEntries(data) {
