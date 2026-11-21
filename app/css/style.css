@@ -243,7 +243,19 @@ label.field > span { display: block; font-size: 13px; color: var(--muted); margi
 /* ───────── 성경 읽기 ───────── */
 .reader-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .reader-nav .ref-btn { flex: 1; text-align: left; font-family: var(--font-display); font-size: 21px; border: 0; background: var(--card); border-radius: 99px; padding: 8px 20px; box-shadow: var(--clay-sm); color: var(--text); }
-.reader-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.reader-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: nowrap; }
+.reader-tools .seg { flex-shrink: 1; min-width: 0; }
+.reader-tools .icon-btn { flex-shrink: 0; }
+/* 좁은 휴대폰: 버튼을 조금 작게 해서 한 줄에 */
+@media (max-width: 420px) {
+  .reader-tools { gap: 6px; }
+  .reader-tools .seg button { padding: 6px 10px; font-size: 13px; }
+  .reader-tools .icon-btn { width: 40px; height: 40px; font-size: 14px; }
+}
+@media (max-width: 350px) {
+  .reader-tools .seg button { padding: 6px 7px; font-size: 12.5px; }
+  .reader-tools .icon-btn { width: 36px; height: 36px; }
+}
 .searchbar { display: flex; gap: 8px; margin-bottom: 12px; }
 .verses { font-size: var(--fs); line-height: 1.85; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--clay); padding: 18px 20px; }
 .verse { padding: 3px 8px; border-radius: 10px; margin: 0 -8px; cursor: pointer; }
