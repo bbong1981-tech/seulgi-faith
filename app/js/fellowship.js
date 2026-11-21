@@ -101,8 +101,8 @@ const CHURCH_APPS = [
 ];
 // 플레이 스토어에 없는 찬송가 앱: 구글 드라이브의 설치 파일(APK)을 받아 직접 설치
 const APK_APPS = [
-  { name: "통일찬송가", url: "https://drive.google.com/file/d/12TSgu1UaG9g2YCH-6sSF_gukrm7uWaBc/view", color: "peach" },
-  { name: "은혜찬송가", url: "https://drive.google.com/file/d/12Vjs0W4l4iOfZbofleoropLjVFGYBOGy/view", color: "mint" }
+  { name: "통일찬송가", url: "https://drive.google.com/file/d/1YBHyN3uyRA47STfMiFG1iRvckE0rqi8-/view", color: "peach" },
+  { name: "은혜찬송가", url: "https://drive.google.com/file/d/1p-gO-U7O0Br1pc3NQfy9oAeBMD8IeAyg/view", color: "mint" }
 ];
 VIEWS.apps = function () {
   $("#topActions").innerHTML = "";
