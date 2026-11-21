@@ -154,11 +154,11 @@ ACT.sermonPlay = async t => {
   const data = await loadFeed(feed).catch(() => null);
   const v = data?.items.find(x => x.id === t.dataset.id); if (!v) return;
   const watch = `https://www.youtube.com/watch?v=${v.id}`;
-  const sp = feed === "praise" ? { title: v.title, preacher: "" } : feed === "ydsermons" ? ydParts(v) : feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
-  const label = feed === "praise" ? v.artist : feed === "clips" ? CLIP_TYPES[v.type] : feed === "ydsermons" ? "영동교회 주일설교" : SERMON_TYPES[v.type];
+  const sp = feed === "churchevents" ? { title: evTitle(v.title), preacher: "" } : feed === "praise" ? { title: v.title, preacher: "" } : feed === "ydsermons" ? ydParts(v) : feed === "clips" ? (cp => ({ title: cp.title, preacher: [cp.speaker, v.channel].filter(Boolean).join(" · ") }))(clipParts(v.title)) : sermonParts(v.title);
+  const label = feed === "churchevents" ? "행사" : feed === "praise" ? v.artist : feed === "clips" ? CLIP_TYPES[v.type] : feed === "ydsermons" ? "영동교회 주일설교" : SERMON_TYPES[v.type];
   openSheet(`${sheetHead(esc(sp.title))}
     <div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/${v.id}?rel=0&playsinline=1" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
-    <p class="small muted" style="margin:10px 2px"><span class="badge">${label}</span> ${fmtFeedDate(v.published)}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
+    <p class="small muted" style="margin:10px 2px"><span class="badge">${label}</span> ${fmtFeedDate(v.published || (v.date ? v.date + "T12:00:00" : ""))}${sp.preacher ? " · " + esc(sp.preacher) : ""}</p>
     <div class="row wrap"><a class="btn" href="${watch}" target="_blank" rel="noopener">${ICON("play", 14)} 유튜브 앱에서 보기</a>
       <button class="btn" data-act="sermonShare" data-id="${v.id}" data-feed="${feed}">공유</button></div>`);
 };
@@ -385,6 +385,37 @@ ACT.lecEp = t => {
   f.scrollIntoView({ behavior: "smooth", block: "center" });
 };
 
+// ───────── 행사 (영동교회 행사 영상) ─────────
+TITLES.churchev = "행사"; SUBTITLES.churchev = "영동교회 행사 영상을 최신순으로 봐요.";
+const CHURCHEV_URL = "https://www.youtube.com/playlist?list=PLQZk6y9PKKgpaUoan2uBQxN8vbP2Z66eD";
+// "[2026/05/24] 2026 영동교회 찬양제" → "2026 영동교회 찬양제"
+const evTitle = t => String(t).replace(/^\s*\[[\d/.\s-]+\]\s*/, "").trim() || t;
+VIEWS.churchev = async function () {
+  $("#topActions").innerHTML = `<a class="icon-btn" href="${CHURCHEV_URL}" target="_blank" rel="noopener" aria-label="유튜브 재생목록 열기">${ICON("play")}</a>`;
+  $("#view").innerHTML = `<p class="muted">행사 영상을 불러오는 중…</p>`;
+  let data;
+  try { data = await loadFeed("churchevents"); } catch { data = null; }
+  if (S.tab !== "churchev") return;
+  const all = (data?.items || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || a.order - b.order);
+  if (!all.length) { $("#view").innerHTML = feedEmpty("아직 행사 영상이 없어요", CHURCHEV_URL, "유튜브 재생목록에서 보기"); return; }
+  const first = all[0], byYear = {};
+  for (const v of all.slice(1)) (byYear[v.date ? v.date.slice(0, 4) + "년" : "그 밖의 영상"] ||= []).push(v);
+  const when = v => v.date ? fmtFeedDate(v.date + "T12:00:00") : "";
+  $("#view").innerHTML = `
+    <button class="card sermon-hero" data-act="sermonPlay" data-feed="churchevents" data-id="${first.id}">
+      <span class="thumb169"><img src="https://i.ytimg.com/vi/${first.id}/hqdefault.jpg" alt="" loading="lazy"><span class="play-badge">${ICON("play", 26)}</span></span>
+      <span class="sermon-meta"><span class="badge">최근 행사</span> <span class="small muted">${when(first)}</span></span>
+      <b class="sermon-title">${esc(evTitle(first.title))}</b>
+    </button>
+    ${Object.entries(byYear).map(([y, list]) => `<div class="section-title">${y}</div>
+    <div class="card feed-list">${list.map(v => `
+      <button class="feed-row" data-act="sermonPlay" data-feed="churchevents" data-id="${v.id}">
+        <span class="feed-thumb"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"></span>
+        <span class="feed-text"><b>${esc(evTitle(v.title))}</b><span class="small muted">${when(v)}</span></span>
+      </button>`).join("")}</div>`).join("")}
+    <p class="small muted" style="text-align:center">${data.updated ? `${agoText(data.updated)}에 업데이트됨 · ` : ""}<a href="${CHURCHEV_URL}" target="_blank" rel="noopener">유튜브 재생목록 전체 보기</a></p>`;
+};
+
 // 바로가기(./?tab=sermon 등)로 열었을 때
-if (["sermon", "blog", "clips", "invite", "hymn", "lecture"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
+if (["sermon", "blog", "clips", "invite", "hymn", "lecture", "churchev"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
 else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움
