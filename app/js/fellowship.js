@@ -6,9 +6,7 @@
    ============================================================ */
 
 const KSM_URL = "https://ksm.jbch.org/";
-const SAINTS_APP_URL = "https://play.google.com/store/apps/details?id=org.jbch.saints_phone";   // 성도연락처 앱
 const SCHOOL_URL = "https://www.jbch.org/ko/school/";                                       // 교회학교 홈페이지
-const DUTY_APP_URL = "https://play.google.com/store/apps/details?id=org.jbch.www.address_duty"; // 임원수첩 앱
 const GUESTBOOK_API = "https://script.google.com/macros/s/AKfycbzKeDODQ1JmGZ1Zd8B20fkFetY9U4-T5leES6Ete-RzCu7ZnxFeN50WtbxXPl32wsLd/exec"; // 구글 시트 방명록 (README의 '방명록 설정')
 TITLES.fellow = "교제"; SUBTITLES.fellow = "깨사모에서 소식을 나누고, 방명록에 따뜻한 한마디를 남겨요.";
 
@@ -30,16 +28,6 @@ VIEWS.fellow = function () {
       <span class="t-ic">${ICON("users", 24)}</span>
       <span class="invite-text"><b class="display">깨사모 홈페이지</b><span class="small muted">깨어있는 사람들의 모임 · 로그인 후 이용할 수 있어요</span></span>
       <span class="btn sm primary">열기</span>
-    </a>
-    <a class="card ksm-card sky" href="${SAINTS_APP_URL}" target="_blank" rel="noopener">
-      <span class="t-ic">${ICON("phone", 24)}</span>
-      <span class="invite-text"><b class="display">성도연락처 앱</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
-      <span class="btn sm primary">받기</span>
-    </a>
-    <a class="card ksm-card butter" href="${DUTY_APP_URL}" target="_blank" rel="noopener">
-      <span class="t-ic">${ICON("notebook", 24)}</span>
-      <span class="invite-text"><b class="display">임원수첩 앱</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
-      <span class="btn sm primary">받기</span>
     </a>
     <a class="card ksm-card peach" href="${SCHOOL_URL}" target="_blank" rel="noopener">
       <span class="t-ic">${ICON("school", 24)}</span>
@@ -98,4 +86,28 @@ async function postGuestbook() {
   } finally { btn.disabled = false; btn.textContent = "남기기"; }
 }
 
-if (S.tab === "fellow") render();
+// ───────── 앱 — 선교회·교회에서 쓰는 앱 받기 (구글 플레이 스토어) ─────────
+TITLES.apps = "앱"; SUBTITLES.apps = "교회 생활에 도움이 되는 앱을 받아요.";
+const PLAY = id => `https://play.google.com/store/apps/details?id=${id}`;
+const CHURCH_APPS = [
+  { name: "성도연락처", id: "org.jbch.saints_phone", icon: "phone", color: "sky" },
+  { name: "임원수첩", id: "org.jbch.www.address_duty", icon: "notebook", color: "butter" },
+  { name: "생명의말씀선교회", id: "org.jbch.lifeworldmission", icon: "book", color: "peach" },
+  { name: "생명선지도", id: "org.jbch.jbchmap", icon: "map", color: "mint" },
+  { name: "성경암송수첩", id: "com.hkkim.biblerecitationnotebook", icon: "bookmark", color: "sky" },
+  { name: "뿌리깊은 싯딤나무", id: "org.jbch.shittimtree", icon: "tree", color: "mint" },
+  { name: "토브성경", id: "org.jbch.tovbible_for_android", icon: "sprout", color: "butter" },
+  { name: "생명기도수첩", id: "org.jbch.praynote", icon: "hands", color: "peach" }
+];
+VIEWS.apps = function () {
+  $("#topActions").innerHTML = "";
+  $("#view").innerHTML = `<div class="app-list">${CHURCH_APPS.map(a => `
+    <a class="card ksm-card ${a.color}" href="${PLAY(a.id)}" target="_blank" rel="noopener">
+      <span class="t-ic">${ICON(a.icon, 24)}</span>
+      <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
+      <span class="btn sm primary">받기</span>
+    </a>`).join("")}</div>
+    <p class="small muted" style="text-align:center;margin-top:14px">안드로이드 휴대폰용 앱이에요. 아이폰에서는 앱 스토어에서 같은 이름으로 찾아보세요.</p>`;
+};
+
+if (["fellow", "apps"].includes(S.tab)) render();

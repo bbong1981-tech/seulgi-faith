@@ -1227,7 +1227,7 @@ function seedDefaultEvents() {
 // ───────── 시작 ─────────
 seedDefaultEvents();
 // 바로가기(./?tab=plan 등)로 열면 그 메뉴부터 보여 줌
-{ const qt = new URLSearchParams(location.search).get("tab"); if (["bible", "plan", "dict", "prayer", "hymn", "lecture", "sermon", "clips", "churchev", "blog", "events", "invite", "fellow"].includes(qt)) S.tab = qt; }
+{ const qt = new URLSearchParams(location.search).get("tab"); if (["bible", "plan", "dict", "prayer", "hymn", "lecture", "sermon", "clips", "churchev", "blog", "events", "invite", "fellow", "apps"].includes(qt)) S.tab = qt; }
 hydrateIcons();
 $("#mascotSide").innerHTML = MASCOT(98);
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => renderSide());

@@ -526,3 +526,5 @@ body.has-selbar main { padding-bottom: 200px; }
 .sel-bar .icon-btn.sm { width: 36px; height: 36px; flex-shrink: 0; }
 @keyframes selUp { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (min-width: 960px) { .sel-bar { left: auto; right: 32px; bottom: 28px; width: 520px; } }
+.app-list { display: flex; flex-direction: column; gap: 12px; }
+.app-list .ksm-card + .ksm-card { margin-top: 0; }
