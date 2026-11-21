@@ -99,9 +99,35 @@ const CHURCH_APPS = [
   { name: "토브성경", id: "org.jbch.tovbible_for_android", icon: "sprout", color: "butter" },
   { name: "생명기도수첩", id: "org.jbch.praynote", icon: "hands", color: "peach" }
 ];
+// 플레이 스토어에 없는 찬송가 앱: 구글 드라이브의 설치 파일(APK)을 받아 직접 설치
+const APK_APPS = [
+  { name: "통일찬송가", url: "https://drive.google.com/file/d/12TSgu1UaG9g2YCH-6sSF_gukrm7uWaBc/view", color: "peach" },
+  { name: "은혜찬송가", url: "https://drive.google.com/file/d/12Vjs0W4l4iOfZbofleoropLjVFGYBOGy/view", color: "mint" }
+];
 VIEWS.apps = function () {
   $("#topActions").innerHTML = "";
-  $("#view").innerHTML = `<div class="app-list">${CHURCH_APPS.map(a => `
+  $("#view").innerHTML = `
+    <div class="section-title" style="margin-top:0">찬송가 앱 <span class="small muted">· 직접 설치</span></div>
+    <div class="app-list">${APK_APPS.map(a => `
+      <a class="card ksm-card ${a.color}" href="${a.url}" target="_blank" rel="noopener">
+        <span class="t-ic">${ICON("music", 24)}</span>
+        <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 드라이브에서 설치 파일 받기</span></span>
+        <span class="btn sm primary">받기</span>
+      </a>`).join("")}</div>
+    <details class="card apk-help" open>
+      <summary><b>📲 설치하는 방법</b> <span class="small muted">(안드로이드 휴대폰)</span></summary>
+      <ol>
+        <li><b>받기</b>를 누르면 구글 드라이브가 열려요. 화면 위쪽의 <b>다운로드(⤓)</b> 버튼을 누르세요. 버튼이 안 보이면 오른쪽 위 <b>⋮</b> → <b>다운로드</b>를 누르세요.</li>
+        <li>"바이러스 검사를 할 수 없습니다"라는 안내가 나오면 <b>무시하고 다운로드</b>를 누르세요. 파일이 커서 나오는 안내예요.</li>
+        <li>다운로드가 끝나면 알림을 누르거나, <b>내 파일 → 다운로드</b> 폴더에서 받은 파일(<b>.apk</b>)을 누르세요.</li>
+        <li>"<b>출처를 알 수 없는 앱</b>" 안내가 나오면 <b>설정</b>을 눌러 <b>이 출처 허용</b>을 켜고, 뒤로 돌아와 <b>설치</b>를 누르세요.</li>
+        <li>"Play 프로텍트" 경고가 나오면 <b>세부정보 더보기 → 무시하고 설치</b>를 누르세요.</li>
+        <li>설치가 끝나면 <b>열기</b>를 누르면 돼요. 받은 설치 파일은 지워도 괜찮아요.</li>
+      </ol>
+      <p class="small muted">· 안전을 위해 설치가 끝난 뒤 4번에서 켠 <b>이 출처 허용</b>은 다시 꺼 두세요.<br>· 휴대폰마다 버튼 이름이 조금 다를 수 있어요.<br>· 아이폰에는 설치할 수 없어요.</p>
+    </details>
+    <div class="section-title">플레이 스토어 앱</div>
+    <div class="app-list">${CHURCH_APPS.map(a => `
     <a class="card ksm-card ${a.color}" href="${PLAY(a.id)}" target="_blank" rel="noopener">
       <span class="t-ic">${ICON(a.icon, 24)}</span>
       <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
