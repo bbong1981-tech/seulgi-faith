@@ -442,16 +442,19 @@ async function updateLectures() {
   } catch (e) { warn(`영동교회 강연회 재생목록을 가져오지 못했습니다: ${e.message}`); }
   if (process.env.LECTURE_PROBE) {
     try {
-      const html = await getPage("https://www.jbch.org/ko/seminar/seminar.php?cId=26&catId=27");
-      const body = html.replace(/<style[\s\S]*?<\/style>/gi, "");
-      console.log(`PROBE2 len=${html.length}`);
-      const i = body.indexOf("책으로 보기");
-      console.log("PROBE2 main html:", body.slice(i, i + 6000).replace(/\s+/g, " "));
-      console.log("PROBE2 yt:", [...new Set([...html.matchAll(/(?:youtu\.be\/|embed\/|v=|vid=|data-yt[^=]*=["'])([\w-]{11})/g)].map(m => m[1]))].slice(0, 30).join(","));
-      console.log("PROBE2 ajax:", [...new Set([...html.matchAll(/["']([^"'\s]*\.php[^"'\s]*)["']/g)].map(m => m[1]))].filter(u => !/login|msg\./.test(u)).slice(0, 60).join(" | "));
-      const scripts = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|load|seminar|fetch|\$\.(get|post)/i.test(t));
-      console.log("PROBE2 scripts:", scripts.join(" ##### ").replace(/\s+/g, " ").slice(0, 5000));
-    } catch (e) { console.log(`PROBE2 실패: ${e.message}`); }
+      const base = "https://www.jbch.org/ko/seminar/seminar.php?cId=26&catId=27";
+      const html = await getPage(base);
+      const srcs = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(m[1], base).href);
+      console.log("PROBE3 srcs:", srcs.join(" | "));
+      for (const u of srcs) {
+        if (/jquery|bootstrap|kakao|google|gtag|swiper|codebase|fontawesome/i.test(u)) continue;
+        try {
+          const js = await getPage(u);
+          const i = js.indexOf("loadSeminar");
+          if (i >= 0) console.log(`PROBE3 found in ${u}:`, js.slice(Math.max(0, i - 200), i + 2500).replace(/\s+/g, " "));
+        } catch (e) { console.log(`PROBE3 ${u} 실패 ${e.message}`); }
+      }
+    } catch (e) { console.log(`PROBE3 실패: ${e.message}`); }
   }
   const out = { yd, ages: old.ages || [] };
   if (same(out.yd, old.yd) && same(out.ages, old.ages)) { console.log("강연회: 바뀐 것 없음"); return; }
