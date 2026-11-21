@@ -482,6 +482,8 @@ label.field > span.row { display: flex; }
 .ksm-card.sky .t-ic { background: var(--sky-ic); }
 .ksm-card.butter { background: linear-gradient(160deg, var(--butter) 0%, var(--card) 70%); }
 .ksm-card.butter .t-ic { background: var(--butter-ic); }
+.ksm-card.peach { background: linear-gradient(160deg, var(--peach) 0%, var(--card) 70%); }
+.ksm-card.peach .t-ic { background: var(--peach-ic); }
 .gb-form { display: flex; flex-direction: column; gap: 10px; }
 .gb-trap { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .gb-list { padding: 4px 16px; }

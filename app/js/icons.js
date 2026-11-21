@@ -33,6 +33,8 @@ const ICON_PATHS = {
   phone: '<rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/>',
   // 수첩: 스프링 달린 공책
   notebook: '<rect x="5" y="3" width="14.5" height="18" rx="3"/><path d="M3 7.5h3.5M3 12h3.5M3 16.5h3.5"/><path d="M10 8h6M10 12h6M10 16h3.5"/>',
+  // 교회학교: 깃발 달린 학교 건물
+  school: '<path d="M3 21h18"/><path d="M5 21V11l7-4.5 7 4.5v10"/><path d="M12 6.5V2.5l3.5 1.2L12 5"/><path d="M10 21v-4.5h4V21"/><path d="M8.5 12.8h.01M15.5 12.8h.01"/>',
   mail: '<rect x="2.8" y="5" width="18.4" height="14" rx="3"/><path d="M3.5 7l8.5 6.2L20.5 7"/>',
   users: '<circle cx="8.6" cy="8" r="3.3"/><path d="M2.6 20.2c0-3.4 2.7-6.1 6-6.1s6 2.7 6 6.1"/><circle cx="16.6" cy="8.8" r="2.7"/><path d="M15.9 14.3c3.1.1 5.5 2.6 5.5 5.9"/>',
   pen: '<path d="M4 20h4.2L19.3 8.9a2.9 2.9 0 0 0-4.2-4.2L4 15.8z"/><path d="M13.6 6.3l4.1 4.1M12 20h8"/>',

@@ -7,6 +7,7 @@
 
 const KSM_URL = "https://ksm.jbch.org/";
 const SAINTS_APP_URL = "https://play.google.com/store/apps/details?id=org.jbch.saints_phone";   // 성도연락처 앱
+const SCHOOL_URL = "https://www.jbch.org/ko/school/";                                       // 교회학교 홈페이지
 const DUTY_APP_URL = "https://play.google.com/store/apps/details?id=org.jbch.www.address_duty"; // 임원수첩 앱
 const GUESTBOOK_API = "https://script.google.com/macros/s/AKfycbzKeDODQ1JmGZ1Zd8B20fkFetY9U4-T5leES6Ete-RzCu7ZnxFeN50WtbxXPl32wsLd/exec"; // 구글 시트 방명록 (README의 '방명록 설정')
 TITLES.fellow = "교제"; SUBTITLES.fellow = "깨사모에서 소식을 나누고, 방명록에 따뜻한 한마디를 남겨요.";
@@ -39,6 +40,11 @@ VIEWS.fellow = function () {
       <span class="t-ic">${ICON("notebook", 24)}</span>
       <span class="invite-text"><b class="display">임원수첩 앱</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
       <span class="btn sm primary">받기</span>
+    </a>
+    <a class="card ksm-card peach" href="${SCHOOL_URL}" target="_blank" rel="noopener">
+      <span class="t-ic">${ICON("school", 24)}</span>
+      <span class="invite-text"><b class="display">교회학교 홈페이지</b><span class="small muted">전국 교회학교 소식과 자료</span></span>
+      <span class="btn sm primary">열기</span>
     </a>
     <div class="section-title">방명록</div>
     ${GUESTBOOK_API ? `
