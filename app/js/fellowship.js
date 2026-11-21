@@ -114,8 +114,9 @@ VIEWS.apps = function () {
         <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 드라이브에서 설치 파일 받기</span></span>
         <span class="btn sm primary">받기</span>
       </a>`).join("")}</div>
+    <p class="small muted apk-which">휴대폰 <b>설정 → 보안 및 개인정보 보호</b>에 <b>"보안 위험 자동 차단"</b>이 있으면 <b>최신 휴대폰</b> 방법을, 없으면 <b>예전 휴대폰</b> 방법을 따라 하세요.</p>
     <details class="card apk-help" open>
-      <summary><b>📲 설치하는 방법</b> <span class="small muted">(안드로이드 휴대폰)</span></summary>
+      <summary><b>📲 최신 휴대폰</b> <span class="small muted">(최근 갤럭시 등)</span></summary>
       <ol>
         <li><b>받기</b>를 누르면 구글 드라이브가 열려요. <b>다운로드(⤓)</b> 버튼을 누르세요. 안 보이면 오른쪽 위 <b>⋮ → 다운로드</b>. "바이러스 검사를 할 수 없습니다"가 나오면 <b>무시하고 다운로드</b>를 누르세요.</li>
         <li><b>[갤럭시] 자동 차단 잠시 끄기</b> — 최신 갤럭시는 이 기능이 켜져 있으면 설치가 막혀요.<br><b>설정 → 보안 및 개인정보 보호 → 보안 위험 자동 차단</b>을 <b>끄기</b>로 바꾸세요. (최신 폰에서는 "30분 뒤 자동으로 다시 켜기"를 고르면 편해요.)</li>
@@ -125,8 +126,21 @@ VIEWS.apps = function () {
         <li>설치가 끝나면 <b>열기</b>. 받은 설치 파일은 지워도 괜찮아요.</li>
       </ol>
       <p class="small muted"><b>설치가 끝난 뒤</b>: 안전을 위해 <b>보안 위험 자동 차단</b>을 다시 켜고, 4번에서 켠 <b>이 출처 허용</b>도 꺼 두세요.</p>
-      <p class="small muted"><b>잘 안 될 때</b><br>· 파일을 눌러도 아무 반응이 없으면 <b>내 파일</b> 앱에서 다시 열어 보세요.<br>· "자동 차단으로 설치가 차단됨"이 다시 나오면 2번이 다시 켜졌는지 확인하세요.<br>· 갤럭시가 아닌 휴대폰은 2번을 건너뛰면 돼요. 휴대폰마다 버튼 이름이 조금 다를 수 있어요.<br>· 아이폰에는 설치할 수 없어요.</p>
+      <p class="small muted"><b>잘 안 될 때</b><br>· 파일을 눌러도 아무 반응이 없으면 <b>내 파일</b> 앱에서 다시 열어 보세요.<br>· "자동 차단으로 설치가 차단됨"이 다시 나오면 2번이 다시 켜졌는지 확인하세요.<br>· 휴대폰마다 버튼 이름이 조금 다를 수 있어요.</p>
     </details>
+    <details class="card apk-help">
+      <summary><b>📱 예전 휴대폰</b> <span class="small muted">(자동 차단 기능이 없는 휴대폰)</span></summary>
+      <ol>
+        <li><b>받기</b>를 누르면 구글 드라이브가 열려요. 화면 위쪽의 <b>다운로드(⤓)</b> 버튼을 누르세요. 버튼이 안 보이면 오른쪽 위 <b>⋮</b> → <b>다운로드</b>를 누르세요.</li>
+        <li>"바이러스 검사를 할 수 없습니다"라는 안내가 나오면 <b>무시하고 다운로드</b>를 누르세요. 파일이 커서 나오는 안내예요.</li>
+        <li>다운로드가 끝나면 알림을 누르거나, <b>내 파일 → 다운로드</b> 폴더에서 받은 파일(<b>.apk</b>)을 누르세요.</li>
+        <li>"<b>출처를 알 수 없는 앱</b>" 안내가 나오면 <b>설정</b>을 눌러 <b>이 출처 허용</b>을 켜고, 뒤로 돌아와 <b>설치</b>를 누르세요.<br><span class="small muted">아주 오래된 휴대폰(안드로이드 7 이하)은 <b>설정 → 보안(또는 잠금화면 및 보안) → 출처를 알 수 없는 앱</b>을 켜 주세요.</span></li>
+        <li>"Play 프로텍트" 경고가 나오면 <b>세부정보 더보기 → 무시하고 설치</b>를 누르세요.</li>
+        <li>설치가 끝나면 <b>열기</b>를 누르면 돼요. 받은 설치 파일은 지워도 괜찮아요.</li>
+      </ol>
+      <p class="small muted">· 안전을 위해 설치가 끝난 뒤 4번에서 켠 <b>이 출처 허용</b>은 다시 꺼 두세요.<br>· 휴대폰마다 버튼 이름이 조금 다를 수 있어요.</p>
+    </details>
+    <p class="small muted" style="margin:8px 4px 0">· 아이폰에는 설치할 수 없어요.</p>
     <div class="section-title">플레이 스토어 앱</div>
     <div class="app-list">${CHURCH_APPS.map(a => `
     <a class="card ksm-card ${a.color}" href="${PLAY(a.id)}" target="_blank" rel="noopener">

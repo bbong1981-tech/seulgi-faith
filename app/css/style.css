@@ -536,3 +536,5 @@ body.has-selbar main { padding-bottom: 200px; }
 .apk-help ol { margin: 12px 0 8px; padding-left: 22px; line-height: 1.7; font-size: 14.5px; }
 .apk-help li { margin-bottom: 6px; }
 .apk-help p { margin: 6px 0 0; line-height: 1.7; }
+.apk-which { margin: 14px 4px 0; line-height: 1.6; }
+.apk-help + .apk-help { margin-top: 10px; }
