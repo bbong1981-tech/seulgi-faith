@@ -474,6 +474,27 @@ async function updateLectures() {
   await save("lectures", { updated: new Date().toISOString(), ...out });
 }
 
+// ───────── 행사 (영동교회 행사 영상 재생목록) ─────────
+// 제목 속 날짜: [2026/10/30] · (26.10.26~) · 2026.10.30 · 2026년 10월 30일
+function titleDate(t) {
+  let m = String(t).match(/(20\d\d)\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{1,2})/) || String(t).match(/(20\d\d)년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (!m) { m = String(t).match(/\(\s*(\d{2})\.(\d{1,2})\.(\d{1,2})/); if (m) m = [m[0], "20" + m[1], m[2], m[3]]; }
+  return m ? `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}` : "";
+}
+async function updateChurchEvents() {
+  const c = config.churchEvents; if (!c) return;
+  const old = await readOld("churchevents");
+  try {
+    const { title, list } = await fetchPlaylist(c.playlist);
+    if (!list.length) throw new Error("영상이 없습니다");
+    const items = list.map((v, i) => ({ id: v.id, title: v.title, date: titleDate(v.title), order: i }));
+    const playlist = { id: c.playlist, title, url: `https://www.youtube.com/playlist?list=${c.playlist}` };
+    console.log(`행사: "${title}" ${items.length}개, 날짜 있는 것 ${items.filter(v => v.date).length}개 (예: ${list.slice(0, 4).map(v => v.title).join(" / ")})`);
+    if (same(items, old.items) && same(playlist, old.playlist)) { console.log("행사: 바뀐 것 없음"); return; }
+    await save("churchevents", { updated: new Date().toISOString(), playlist, items });
+  } catch (e) { warn(`행사 재생목록을 가져오지 못했습니다: ${e.message}`); }
+}
+
 await updateSermons();
 await updateYdSermons();
 await updatePraise();
@@ -481,3 +502,4 @@ await updateBlog();
 await updateClips();
 await updateSeminar();
 await updateLectures();
+await updateChurchEvents();
