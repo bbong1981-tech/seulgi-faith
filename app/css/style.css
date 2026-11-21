@@ -477,6 +477,11 @@ label.field > span.row { display: flex; }
 .ksm-card { display: flex; align-items: center; gap: 12px; padding: 14px; text-decoration: none; color: inherit; background: linear-gradient(160deg, var(--mint) 0%, var(--card) 70%); }
 .ksm-card .t-ic { width: 46px; height: 46px; border-radius: 16px; background: var(--mint-ic); color: #fff; display: grid; place-items: center; box-shadow: var(--clay-sm); flex-shrink: 0; }
 .ksm-card .invite-text b { font-size: 19px; }
+.ksm-card + .ksm-card { margin-top: 12px; }
+.ksm-card.sky { background: linear-gradient(160deg, var(--sky) 0%, var(--card) 70%); }
+.ksm-card.sky .t-ic { background: var(--sky-ic); }
+.ksm-card.butter { background: linear-gradient(160deg, var(--butter) 0%, var(--card) 70%); }
+.ksm-card.butter .t-ic { background: var(--butter-ic); }
 .gb-form { display: flex; flex-direction: column; gap: 10px; }
 .gb-trap { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .gb-list { padding: 4px 16px; }
