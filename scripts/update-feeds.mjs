@@ -506,21 +506,22 @@ async function updateChurchEvents() {
 async function updateBulletin() {
   const c = config.bulletin; if (!c) return;
   if (process.env.BUL_PROBE) {
-    const uid = "5087336";
-    for (const u of [`https://church.jbch.org/board/list.php?chId=58&flag=1&uid=${uid}`, `https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${uid}`, `https://church.jbch.org/age/board/list.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${uid}`]) {
-      try {
-        const r = await fetch(u, { headers: UA, redirect: "manual" });
-        const loc = r.headers.get("location");
-        const vh = r.status < 300 ? await r.text() : "";
-        console.log(`BPROBE2 ${u} → ${r.status} ${loc || ""} len ${vh.length}`, vh.length < 600 ? vh.replace(/\s+/g, " ") : "");
-        if (vh.length > 600) {
-          console.log("BPROBE2 imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).filter(x => !/icon|logo|btn|profile/i.test(x)).join(" | ").slice(0, 2500));
-          const i = vh.search(/주일소식지/);
-          console.log("BPROBE2 near:", vh.slice(i, i + 3000).replace(/\s+/g, " "));
-          console.log("BPROBE2 calls:", [...new Set([...vh.matchAll(/(all_loadPost\w*|loadPost\w*|view\w*)\(([^)]*)\)/g)].map(m => m[0]))].slice(0, 20).join(" | "));
-        }
-      } catch (e) { console.log(`BPROBE2 ${u} 실패 ${e.message}`); }
-    }
+    try {
+      const u = "https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=5087336";
+      const vh = await getPage(u);
+      const og = (vh.match(/og:image" content="([^"]+)"/) || [])[1];
+      for (const iu of [og, og.replace("/sum_", "/"), og.replace("sum_", "")]) {
+        const r = await fetch(iu, { headers: UA });
+        const buf = Buffer.from(await r.arrayBuffer());
+        console.log(`BPROBE3 ${iu} → ${r.status} ${r.headers.get("content-type")} ${buf.length}B`);
+      }
+      const i = vh.indexOf("function view_post");
+      console.log("BPROBE3 view_post:", vh.slice(i, i + 2000).replace(/\s+/g, " "));
+      const j = vh.search(/id=['"]?(post|content|view|bbs)/i);
+      console.log("BPROBE3 body:", vh.slice(j, j + 2500).replace(/\s+/g, " "));
+      const k = vh.indexOf("file2.jbch.org", vh.indexOf("</head>"));
+      console.log("BPROBE3 file2 in body:", k, vh.slice(Math.max(0, k - 300), k + 600).replace(/\s+/g, " "));
+    } catch (e) { console.log(`BPROBE3 실패: ${e.message}`); }
   }
 }
 
