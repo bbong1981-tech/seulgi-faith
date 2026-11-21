@@ -503,23 +503,47 @@ async function updateChurchEvents() {
 }
 
 // ───────── 주일 소식지 (교회 홈페이지 게시판) ─────────
+async function bulletinImages(uid, year) {
+  const r = await fetch("https://church.jbch.org/age/board/process.php", {
+    method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
+    body: `mode=load_post&post_uid=${uid}&flag=1&chId=58&uid=${uid}&use_kind=1&boardId=13096&year=${year}&result=`
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  const parts = (await r.text()).split("@@");
+  if (parts[1] !== "ok") throw new Error(parts[1] || "글을 읽지 못했습니다");
+  const imgs = [...parts[2].matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(decode(m[1]), "https://church.jbch.org/").href)
+    .filter(u => /file\d*\.jbch\.org|\/upload|\/board\//i.test(u) && !/icon|emoti|btn/i.test(u))
+    .map(u => u.replace(/\/sum_/, "/"));
+  return [...new Set(imgs)];
+}
 async function updateBulletin() {
   const c = config.bulletin; if (!c) return;
-  if (process.env.BUL_PROBE) {
-    try {
-      const u = "https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=5087336";
-      const vh = await getPage(u);
-      const srcs = [...vh.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(m[1], u).href).filter(x => !/jquery|bootstrap|kakao|google|gtag|swiper|uikit|menuzord|datatables|toastr|bootbox/i.test(x));
-      console.log("BPROBE4 srcs:", srcs.join(" | "));
-      for (const x of srcs) {
-        try {
-          const js = await getPage(x);
-          const i = js.indexOf("function view_post");
-          if (i >= 0) console.log(`BPROBE4 in ${x}:`, js.slice(i, i + 3000).replace(/\s+/g, " "));
-        } catch (e) { console.log(`BPROBE4 ${x} 실패 ${e.message}`); }
+  const old = await readOld("bulletin");
+  try {
+    const xml = await getPage(c.rss);
+    const posts = blocks(xml, "item").map(it => {
+      const title = tag(it, "title").trim();
+      const m = title.match(/(20\d\d)\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+      const pub = new Date(tag(it, "pubDate"));
+      const date = m ? `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` : isNaN(pub) ? "" : pub.toISOString().slice(0, 10);
+      return { uid: tag(it, "id"), title, date, year: isNaN(pub) ? date.slice(0, 4) : String(pub.getFullYear()) };
+    }).filter(p => p.uid && p.title).slice(0, c.max || 60);
+    const known = new Map(old.items.map(p => [p.uid, p]));
+    let fetched = 0;
+    const items = [];
+    for (const p of posts) {
+      let images = known.get(p.uid)?.images || [];
+      if (!images.length && fetched < 30) { // 새 글만 (한 번에 30개까지)
+        fetched++;
+        try { images = await bulletinImages(p.uid, p.year); } catch (e) { warn(`주일 소식지 그림을 못 읽음 (${p.title}): ${e.message}`); }
       }
-    } catch (e) { console.log(`BPROBE4 실패: ${e.message}`); }
-  }
+      items.push({ uid: p.uid, title: p.title, date: p.date, images });
+    }
+    const url = `https://church.jbch.org/age/board/list.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096`;
+    console.log(`주일 소식지: ${items.length}개, 새로 읽음 ${fetched}개 (최근: ${items.slice(0, 3).map(p => `${p.title} 그림 ${p.images.length}장`).join(" / ")})`);
+    if (same(items, old.items)) { console.log("주일 소식지: 바뀐 것 없음"); return; }
+    await save("bulletin", { updated: new Date().toISOString(), url, items });
+  } catch (e) { warn(`주일 소식지를 가져오지 못했습니다: ${e.message}`); }
 }
 
 await updateSermons();
