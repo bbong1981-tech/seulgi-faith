@@ -503,15 +503,24 @@ async function updateChurchEvents() {
 }
 
 // ───────── 주일 소식지 (교회 홈페이지 게시판) ─────────
+// 글 본문(그림 여러 장)을 먼저 시도하고, 안 되면 글 페이지의 대표 그림(og:image) 한 장을 씀
 async function bulletinImages(uid, year) {
-  const r = await fetch("https://church.jbch.org/age/board/process.php", {
-    method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
-    body: `mode=load_post&post_uid=${uid}&flag=1&chId=58&uid=${uid}&use_kind=1&boardId=13096&year=${year}&result=`
-  });
-  if (!r.ok) throw new Error(`${r.status}`);
-  const parts = (await r.text()).split("@@");
-  if (parts[1] !== "ok") throw new Error(parts[1] || "글을 읽지 못했습니다");
-  const imgs = [...parts[2].matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(decode(m[1]), "https://church.jbch.org/").href)
+  const view = `https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${uid}`;
+  let html = "";
+  for (const y of [year, ""]) {
+    const r = await fetch("https://church.jbch.org/age/board/process.php", {
+      method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", Referer: view },
+      body: `mode=load_post&post_uid=${uid}&auth_ok=&flag=1&chId=58&uid=${uid}&parent_uid=&use_kind=1&boardId=13096&group_uid=&head_uid=&last_uid=&limit_uid=&last_num=&limit_num=&year=${y}&month=&limit=&userid=&favorite=&page=&url=${encodeURIComponent(view)}&gCode=11157&abtype=2&result=`
+    });
+    const parts = r.ok ? (await r.text()).split("@@") : [];
+    if (parts[1] === "ok") { html = parts[2]; break; }
+  }
+  if (!html) {
+    const page = await getPage(view);
+    const og = (page.match(/og:image["'][^>]*?content=["']([^"']+)["']/) || [])[1];
+    return og ? [og.replace(/\/sum_/, "/")] : [];
+  }
+  const imgs = [...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(decode(m[1]), "https://church.jbch.org/").href)
     .filter(u => /file\d*\.jbch\.org|\/upload|\/board\//i.test(u) && !/icon|emoti|btn/i.test(u))
     .map(u => u.replace(/\/sum_/, "/"));
   return [...new Set(imgs)];
@@ -533,7 +542,7 @@ async function updateBulletin() {
     const items = [];
     for (const p of posts) {
       let images = known.get(p.uid)?.images || [];
-      if (!images.length && fetched < 30) { // 새 글만 (한 번에 30개까지)
+      if (!images.length && fetched < 60) { // 새 글만 (한 번에 60개까지)
         fetched++;
         try { images = await bulletinImages(p.uid, p.year); } catch (e) { warn(`주일 소식지 그림을 못 읽음 (${p.title}): ${e.message}`); }
       }
