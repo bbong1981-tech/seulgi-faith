@@ -106,7 +106,7 @@ const SUBTITLES = {
   plan: "매일 조금씩, 성경 전체를 끝까지 함께 읽어요.",
   dict: "성경에 나오는 낯선 단어의 뜻과 원어를 찾아봐요.",
   prayer: "부탁받은 기도 제목을 잊지 않고 기록하고, 응답을 남겨요.",
-  events: "예배와 모임 일정을 정리하고 알림을 받아요."
+  events: "말씀과 모임 일정을 정리하고 알림을 받아요."
 };
 const tile = (color, icon, label, num, sub, unit = "") =>
   `<div class="tile ${color}"><span class="t-ic">${ICON(icon, 20)}</span><span class="t-label">${label}</span><span class="t-num">${num}${unit ? `<small>${unit}</small>` : ""}</span><span class="t-sub">${sub}</span></div>`;
@@ -862,8 +862,10 @@ VIEWS.events = function () {
     <div class="row"><div class="section-title" style="margin-top:4px">${fmtDate(S.calSel)}</div><span class="spacer"></span><button class="btn sm" data-act="eventNew" data-d="${S.calSel}">＋ 이 날 일정</button></div>
     ${selList.map(e => eventCard(e, S.calSel)).join("") || `<p class="muted small" style="margin:4px 2px 12px">일정이 없습니다.</p>`}
     <div class="section-title">다가오는 2주</div>
-    ${upcoming || `<p class="muted small">예정된 일정이 없습니다.</p>`}`;
+    ${upcoming || `<p class="muted small">예정된 일정이 없습니다.</p>`}
+    <div id="bulletinBox"></div>`;
   window.renderSeminar?.(); // 맨 위: 성경강연회 연간 일정 (media.js)
+  window.renderBulletin?.(); // 맨 아래: 주일 소식지 (media.js)
 };
 function eventCard(e, ds, showDate) {
   const c = EV_CATS[e.cat] || "#888";

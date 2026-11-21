@@ -275,6 +275,42 @@ window.renderSeminar = async function () {
 };
 ACT.semYear = t => { S.semYear = t.dataset.y; window.renderSeminar(); };
 
+// ───────── 주일 소식지 (일정 메뉴 맨 아래) ─────────
+S.bulShow = 6;
+const bulThumb = u => u.replace(/\/(\d+_\d{14}_[^/]+)$/, "/sum_$1"); // 작은 그림(sum_)으로 목록을 빨리 띄움
+const bulTitle = t => String(t).replace(/\s*주일\s*소식지\s*$/, "").trim();
+window.renderBulletin = async function () {
+  const box = $("#bulletinBox"); if (!box) return;
+  let data;
+  try { data = await loadFeed("bulletin"); } catch { data = null; }
+  if (S.tab !== "events" || !$("#bulletinBox")) return;
+  const items = (data?.items || []).filter(p => p.images?.length);
+  const url = data?.url || "https://church.jbch.org/age/board/list.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096";
+  if (!items.length) { box.innerHTML = `<div class="section-title">주일 소식지</div><div class="card row"><span class="small muted">소식지를 불러오지 못했어요.</span><span class="spacer"></span><a class="btn sm" href="${url}" target="_blank" rel="noopener">홈페이지에서 보기</a></div>`; return; }
+  const [first, ...rest] = items;
+  box.innerHTML = `<div class="row"><div class="section-title">주일 소식지</div><span class="spacer"></span><a class="small" href="${url}" target="_blank" rel="noopener">홈페이지</a></div>
+    <button class="card bul-hero" data-act="bulOpen" data-uid="${esc(first.uid)}">
+      <span class="bul-img"><img src="${esc(bulThumb(first.images[0]))}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>
+      <span class="bul-meta"><span class="badge">이번 주</span><b>${esc(bulTitle(first.title))}</b><span class="small muted">눌러서 크게 보기</span></span>
+    </button>
+    <div class="card feed-list">${rest.slice(0, S.bulShow).map(p => `
+      <button class="feed-row" data-act="bulOpen" data-uid="${esc(p.uid)}">
+        <span class="feed-thumb bul-thumb"><img src="${esc(bulThumb(p.images[0]))}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>
+        <span class="feed-text"><b>${esc(bulTitle(p.title))}</b><span class="small muted">주일 소식지</span></span>
+      </button>`).join("")}</div>
+    ${rest.length > S.bulShow ? `<p style="text-align:center"><button class="btn" data-act="bulMore">지난 소식지 더 보기</button></p>` : ""}`;
+};
+ACT.bulMore = () => { S.bulShow += 10; window.renderBulletin(); };
+ACT.bulOpen = async t => {
+  const data = await loadFeed("bulletin").catch(() => null);
+  const p = data?.items.find(x => x.uid === t.dataset.uid); if (!p) return;
+  const post = `https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=${encodeURIComponent(p.uid)}`;
+  openSheet(`${sheetHead(esc(bulTitle(p.title)) + " 주일 소식지")}
+    <div class="bul-pages">${p.images.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="주일 소식지" referrerpolicy="no-referrer"></a>`).join("")}</div>
+    <p class="small muted" style="margin:10px 2px">그림을 누르면 새 창에서 크게 확대해 볼 수 있어요.</p>
+    <div class="row wrap"><a class="btn" href="${post}" target="_blank" rel="noopener">홈페이지에서 전체 보기</a></div>`);
+};
+
 // ───────── 초대장 (성경강연회 초대장 만들기·보내기) ─────────
 const INVITE_URL = "https://mdata.jbch.org/mcard/";
 TITLES.invite = "초대장"; SUBTITLES.invite = "사랑하는 당신을 성경강연회에 초대합니다";
@@ -418,4 +454,4 @@ VIEWS.churchev = async function () {
 
 // 바로가기(./?tab=sermon 등)로 열었을 때
 if (["sermon", "blog", "clips", "invite", "hymn", "lecture", "churchev"].includes(S.tab)) render(); // 찬양도 이 파일의 loadFeed를 씀
-else if (S.tab === "events") window.renderSeminar(); // 일정 화면이 먼저 그려졌으면 강연회 표만 채움
+else if (S.tab === "events") { window.renderSeminar(); window.renderBulletin(); } // 일정 화면이 먼저 그려졌으면 강연회 표만 채움

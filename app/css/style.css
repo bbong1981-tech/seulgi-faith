@@ -463,6 +463,16 @@ label.field > span.row { display: flex; }
 .lec-ep .hno { min-width: 34px; height: 32px; font-size: 15px; border-radius: 11px; flex-shrink: 0; }
 .lec-ep .feed-row.on b { color: var(--accent-deep); } .lec-ep .feed-row.on .hno { background: var(--accent); color: var(--on-accent); }
 
+/* 주일 소식지 */
+.bul-hero { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.bul-img { width: 108px; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: var(--peach); box-shadow: var(--clay-sm); flex-shrink: 0; }
+.bul-img img, .bul-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.bul-meta { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.bul-meta b { font-size: 18px; }
+.bul-thumb { aspect-ratio: 3 / 4 !important; width: 54px !important; }
+.bul-pages { display: flex; flex-direction: column; gap: 10px; }
+.bul-pages img { width: 100%; border-radius: 12px; display: block; background: #fff; box-shadow: var(--clay-sm); }
+
 /* 교제 · 방명록 */
 .ksm-card { display: flex; align-items: center; gap: 12px; padding: 14px; text-decoration: none; color: inherit; background: linear-gradient(160deg, var(--mint) 0%, var(--card) 70%); }
 .ksm-card .t-ic { width: 46px; height: 46px; border-radius: 16px; background: var(--mint-ic); color: #fff; display: grid; place-items: center; box-shadow: var(--clay-sm); flex-shrink: 0; }
