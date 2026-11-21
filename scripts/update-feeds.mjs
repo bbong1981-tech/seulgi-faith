@@ -509,20 +509,16 @@ async function updateBulletin() {
     try {
       const u = "https://church.jbch.org/age/board/view.php?flag=1&chId=58&gCode=11157&abtype=2&boardId=13096&uid=5087336";
       const vh = await getPage(u);
-      console.log("BPROBE3 len", vh.length, "og region:", vh.slice(vh.indexOf("og:image") - 50, vh.indexOf("og:image") + 200));
-      const og = (vh.match(/og:image["']\s+content=["']([^"']+)["']/) || [])[1] || "https://file2.jbch.org/2026/board/1/58/sum_58_20261119181007_8460_pmskmj.jpg";
-      for (const iu of [og, og.replace("/sum_", "/"), og.replace("sum_", "")]) {
-        const r = await fetch(iu, { headers: UA });
-        const buf = Buffer.from(await r.arrayBuffer());
-        console.log(`BPROBE3 ${iu} → ${r.status} ${r.headers.get("content-type")} ${buf.length}B`);
+      const srcs = [...vh.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(m[1], u).href).filter(x => !/jquery|bootstrap|kakao|google|gtag|swiper|uikit|menuzord|datatables|toastr|bootbox/i.test(x));
+      console.log("BPROBE4 srcs:", srcs.join(" | "));
+      for (const x of srcs) {
+        try {
+          const js = await getPage(x);
+          const i = js.indexOf("function view_post");
+          if (i >= 0) console.log(`BPROBE4 in ${x}:`, js.slice(i, i + 3000).replace(/\s+/g, " "));
+        } catch (e) { console.log(`BPROBE4 ${x} 실패 ${e.message}`); }
       }
-      const i = vh.indexOf("function view_post");
-      console.log("BPROBE3 view_post:", vh.slice(i, i + 2000).replace(/\s+/g, " "));
-      const j = vh.search(/id=['"]?(post|content|view|bbs)/i);
-      console.log("BPROBE3 body:", vh.slice(j, j + 2500).replace(/\s+/g, " "));
-      const k = vh.indexOf("file2.jbch.org", vh.indexOf("</head>"));
-      console.log("BPROBE3 file2 in body:", k, vh.slice(Math.max(0, k - 300), k + 600).replace(/\s+/g, " "));
-    } catch (e) { console.log(`BPROBE3 실패: ${e.message}`); }
+    } catch (e) { console.log(`BPROBE4 실패: ${e.message}`); }
   }
 }
 
