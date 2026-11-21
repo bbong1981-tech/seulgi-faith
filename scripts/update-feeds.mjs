@@ -442,19 +442,24 @@ async function updateLectures() {
   } catch (e) { warn(`영동교회 강연회 재생목록을 가져오지 못했습니다: ${e.message}`); }
   if (process.env.LECTURE_PROBE) {
     try {
-      const base = "https://www.jbch.org/ko/seminar/seminar.php?cId=26&catId=27";
-      const html = await getPage(base);
-      const srcs = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => new URL(m[1], base).href);
-      console.log("PROBE3 srcs:", srcs.join(" | "));
-      for (const u of srcs) {
-        if (/jquery|bootstrap|kakao|google|gtag|swiper|codebase|fontawesome/i.test(u)) continue;
-        try {
-          const js = await getPage(u);
-          const i = js.indexOf("loadSeminar");
-          if (i >= 0) console.log(`PROBE3 found in ${u}:`, js.slice(Math.max(0, i - 200), i + 2500).replace(/\s+/g, " "));
-        } catch (e) { console.log(`PROBE3 ${u} 실패 ${e.message}`); }
+      for (const cat of [27, 23, 52]) {
+        const r = await fetch("https://www.jbch.org/common/inc/process.php", { method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: `mode=loadSeminar&cId=${cat}` });
+        const t = await r.text();
+        console.log(`PROBE4 cat ${cat} status ${r.status} len ${t.length}:`, t.slice(0, 1500).replace(/\s+/g, " "));
+        let d; try { d = JSON.parse(t); } catch { continue; }
+        console.log(`PROBE4 cat ${cat} count ${d.length} keys ${Object.keys(d[0] || {}).join(",")} titles:`, d.map(x => `${x.title}[${x.defaultVideo}:${x.youtubeLink}]`).join(" / ").slice(0, 2500));
+        if (cat === 27 && d[0]) {
+          const vu = `https://www.jbch.org/ko/seminar/view.php?psId=${d[0].psId}&cId=${d[0].cId}`;
+          const html = await getPage(vu);
+          const body = html.replace(/<style[\s\S]*?<\/style>/gi, "");
+          const i = body.indexOf("END Hero");
+          console.log("PROBE4 view:", vu, body.slice(i, i + 5000).replace(/\s+/g, " "));
+          console.log("PROBE4 view yt:", [...new Set([...html.matchAll(/(?:youtu\.be\/|embed\/|vi\/|v=)([\w-]{11})/g)].map(m => m[1]))].join(","));
+          const sc = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(t => /ajax|youtube|video|load/i.test(t));
+          console.log("PROBE4 view scripts:", sc.join(" ##### ").replace(/\s+/g, " ").slice(0, 3000));
+        }
       }
-    } catch (e) { console.log(`PROBE3 실패: ${e.message}`); }
+    } catch (e) { console.log(`PROBE4 실패: ${e.message}`); }
   }
   const out = { yd, ages: old.ages || [] };
   if (same(out.yd, old.yd) && same(out.ages, old.ages)) { console.log("강연회: 바뀐 것 없음"); return; }
