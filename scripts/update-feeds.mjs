@@ -502,6 +502,31 @@ async function updateChurchEvents() {
   } catch (e) { warn(`행사 재생목록을 가져오지 못했습니다: ${e.message}`); }
 }
 
+// ───────── 주일 소식지 (교회 홈페이지 게시판) ─────────
+async function updateBulletin() {
+  const c = config.bulletin; if (!c) return;
+  if (process.env.BUL_PROBE) {
+    try {
+      const html = await getPage(c.url);
+      const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
+      console.log(`BPROBE len=${html.length} text:`, cellText(body).replace(/\n+/g, " ⏎ ").slice(0, 2500));
+      const links = [...new Set([...html.matchAll(/(?:href|onclick)=["']([^"']*(?:view|read|idx|bbs|board)[^"']*)["']/gi)].map(m => m[1]))];
+      console.log("BPROBE links:", links.slice(0, 40).join(" | "));
+      const i = body.search(/소식지|주보/);
+      console.log("BPROBE html:", body.slice(Math.max(0, i - 500), i + 4000).replace(/\s+/g, " "));
+      const v = links.find(l => /view/i.test(l));
+      if (v) {
+        const u = new URL(v.replace(/^.*?['"]([^'"]+)['"].*$/, "$1"), c.url).href;
+        const vh = await getPage(u);
+        const vb = vh.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
+        console.log("BPROBE view", u, "imgs:", [...vh.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).join(" | ").slice(0, 2500));
+        console.log("BPROBE view text:", cellText(vb).replace(/\n+/g, " ⏎ ").slice(0, 2000));
+        console.log("BPROBE view files:", [...vh.matchAll(/href=["']([^"']*(?:down|file|\.pdf|\.jpg|\.hwp)[^"']*)["']/gi)].map(m => m[1]).join(" | ").slice(0, 1500));
+      }
+    } catch (e) { console.log(`BPROBE 실패: ${e.message}`); }
+  }
+}
+
 await updateSermons();
 await updateYdSermons();
 await updatePraise();
@@ -510,3 +535,4 @@ await updateClips();
 await updateSeminar();
 await updateLectures();
 await updateChurchEvents();
+await updateBulletin();
