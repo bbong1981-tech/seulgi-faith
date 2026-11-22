@@ -633,15 +633,15 @@ async function updateAppIcons() {
 // 임시 점검: 아이폰 앱 찾기
 async function probeIosApps() {
   if (!process.env.IOS_PROBE) return;
-  const names = ["성도연락처", "임원수첩", "생명의말씀선교회", "생명선지도", "성경암송수첩", "뿌리깊은 싯딤나무", "싯딤나무", "토브성경", "생명기도수첩", "통일찬송가", "은혜찬송가", "기쁜소식선교회"];
-  const ids = ["org.jbch.saints_phone", "org.jbch.www.address_duty", "org.jbch.lifeworldmission", "org.jbch.jbchmap", "com.hkkim.biblerecitationnotebook", "org.jbch.shittimtree", "org.jbch.tovbible_for_android", "org.jbch.tovbible", "org.jbch.praynote"];
+  const names = ["기도수첩", "생명 기도수첩", "기도 수첩", "praynote", "pray note", "기도노트 생명"];
+  const ids = ["org.jbch.praynote", "org.jbch.www.praynote", "org.lifewordmission.praynote", "kr.co.cedartrees.praynote"];
   for (const id of ids) {
     try { const d = JSON.parse(await get(`https://itunes.apple.com/lookup?bundleId=${id}&country=kr`)); console.log(`IOSP id ${id}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.trackViewUrl}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP id ${id} 실패 ${e.message}`); }
   }
   for (const n of names) {
     try { const d = JSON.parse(await get(`https://itunes.apple.com/search?term=${encodeURIComponent(n)}&country=kr&entity=software&limit=8`)); console.log(`IOSP name ${n}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.bundleId} | ${r.trackViewUrl.split("?")[0]}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP name ${n} 실패 ${e.message}`); }
   }
-  for (const dev of ["Life Word Mission", "생명의말씀선교회", "jbch"]) {
+  for (const dev of ["hogil kim"]) {
     try { const d = JSON.parse(await get(`https://itunes.apple.com/search?term=${encodeURIComponent(dev)}&country=kr&entity=software&attribute=softwareDeveloper&limit=50`)); console.log(`IOSP dev ${dev}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.bundleId} | ${r.trackViewUrl.split("?")[0]}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP dev ${dev} 실패 ${e.message}`); }
   }
 }
