@@ -233,7 +233,7 @@ VIEWS.bible = async function () {
       if (bms.has(v)) html += `<span class="bm">🔖</span>`;
       html += `</div>`;
     }
-    const read = readSet.has(`${book}:${chapter}`);
+    const read = chapterRead(`${book}:${chapter}`);
     html += `<div class="chapter-foot">
       <button class="btn" data-act="prevCh">◀ 이전</button>
       <button class="btn ${read ? "" : "primary"}" data-act="toggleRead">${read ? "✓ 읽음 완료" : "이 장 읽음 표시"}</button>
@@ -262,7 +262,11 @@ ACT.setMode = t => { S.settings.mode = t.dataset.mode; saveSettings(); render();
 ACT.font = t => { S.settings.fontSize = Math.max(13, Math.min(30, S.settings.fontSize + Number(t.dataset.d))); saveSettings(); applyTheme(); };
 ACT.toggleRead = () => {
   const k = `${S.settings.ref.book}:${S.settings.ref.chapter}`;
-  if (readSet.has(k)) { readSet.delete(k); markPlanChapter(k, false); } else { readSet.add(k); markPlanChapter(k, true); toast("읽음으로 표시했습니다 ✓"); }
+  if (chapterRead(k)) {
+    markPlanChapter(k, false);
+    const p = curPlan(); if (!multiPass(p) || !planSlots(p, k).any) readSet.delete(k); // 다른 회차에서 읽은 기록이 있으면 전체 진도는 그대로
+    toast("읽음 표시를 지웠습니다");
+  } else { readSet.add(k); markPlanChapter(k, true); toast("읽음으로 표시했습니다 ✓"); }
   saveRead(); render();
 };
 
@@ -522,22 +526,31 @@ function currentPass(p) {
   let before = 0; for (let i = 0; i < f; i++) before += p.days[i].length;
   return Math.min(p.passes, Math.floor(before / TOTAL_CHAPTERS) + 1);
 }
+// n독 계획: 이 장(k)이 들어 있는 날 중 지금 읽을 차례인 날들
+//  - 오늘까지의 날 + (앞서 읽는 경우를 위해) 앞으로 14일 안의 가장 가까운 날 하나
+//  → 몇 달 뒤 다음 회차의 같은 장은 건드리지 않음
+function planSlots(p, k) {
+  const prog = p.prog || {}, today = diffDays(todayStr(), p.start);
+  const occ = []; p.days.forEach((l, i) => { if (l.some(([b, c]) => `${b}:${c}` === k)) occ.push(i); });
+  const done = i => (prog[i] || []).includes(k);
+  const past = occ.filter(i => i <= today);
+  const next = occ.find(i => i > today && i <= today + 14);
+  const rel = past.filter(done).length === past.length && next !== undefined ? past.concat(next) : past.length ? past : next !== undefined ? [next] : occ.slice(0, 1);
+  return { todo: rel.find(i => !done(i)), done: rel.filter(done), any: occ.some(done) };
+}
+// 성경 탭의 '이 장 읽음' 상태: n독 계획이면 계획 기준, 아니면 읽은 기록 기준
+function chapterRead(k) {
+  const p = curPlan();
+  if (multiPass(p)) { const s = planSlots(p, k); if (s.todo !== undefined || s.done.length) return s.todo === undefined; }
+  return readSet.has(k);
+}
 function savePlanProg(prog) { const st = store.get("plan"); st.prog = prog; store.set("plan", st); }
 // 성경 탭에서 '읽음 표시'한 장을 n독 계획의 날짜에 반영
 function markPlanChapter(k, add) {
   const p = curPlan(); if (!multiPass(p)) return;
-  const prog = p.prog || {}, today = Math.min(diffDays(todayStr(), p.start), p.days.length - 1);
-  const has = i => p.days[i].some(([b, c]) => `${b}:${c}` === k);
-  if (add) {
-    // 아직 안 읽은 가장 이른 날(오늘까지) → 없으면 오늘 이후 가장 가까운 날
-    let target = -1;
-    for (let i = 0; i <= today && target < 0; i++) if (has(i) && !(prog[i] || []).includes(k)) target = i;
-    for (let i = Math.max(today + 1, 0); i < p.days.length && target < 0; i++) if (has(i) && !(prog[i] || []).includes(k)) target = i;
-    if (target < 0) return;
-    prog[target] = (prog[target] || []).concat(k);
-  } else {
-    for (let i = p.days.length - 1; i >= 0; i--) if ((prog[i] || []).includes(k)) { prog[i] = prog[i].filter(x => x !== k); break; }
-  }
+  const prog = p.prog || {}, s = planSlots(p, k);
+  if (add) { if (s.todo === undefined) return; prog[s.todo] = (prog[s.todo] || []).concat(k); }
+  else { const i = s.done[s.done.length - 1]; if (i === undefined) return; prog[i] = prog[i].filter(x => x !== k); }
   savePlanProg(prog);
 }
 function todayReading() {
