@@ -6,7 +6,8 @@
 // - 네이버 블로그: RSS(최신 글)에서 가져옵니다.
 // - 이미 모아 둔 목록에 새 항목을 더해 가므로, 지난 설교·글도 계속 남습니다.
 // - 가져오기에 실패하면 이전 목록을 그대로 두고 경고만 남깁니다.
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, access, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -555,6 +556,80 @@ async function updateBulletin() {
   } catch (e) { warn(`주일 소식지를 가져오지 못했습니다: ${e.message}`); }
 }
 
+// ───────── 앱 메뉴의 실제 앱 아이콘 (없는 것만 한 번 받아 app/icons/apps/ 에 저장) ─────────
+const ICON_DIR = join(ROOT, "app", "icons", "apps");
+const exists = f => access(f).then(() => true, () => false);
+async function saveBin(url, file, headers = {}) {
+  const r = await fetch(url, { headers: { ...UA, ...headers }, redirect: "follow" });
+  if (!r.ok) throw new Error(`${r.status}`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  await writeFile(file, buf);
+  return { buf, type: r.headers.get("content-type") || "" };
+}
+// APK 안에서 앱 아이콘(가장 큰 png) 꺼내기
+function apkIcon(apk, out) {
+  const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "/usr/local/lib/android/sdk";
+  let aapt = "";
+  try { aapt = execFileSync("bash", ["-c", `ls -d ${sdk}/build-tools/*/aapt 2>/dev/null | sort -V | tail -1`]).toString().trim(); } catch { }
+  const cands = [];
+  if (aapt) {
+    try {
+      const b = execFileSync(aapt, ["dump", "badging", apk], { maxBuffer: 1 << 26 }).toString();
+      for (const m of b.matchAll(/application-icon-\d+:'([^']+)'/g)) cands.push(m[1]);
+      console.log(`앱 아이콘: aapt 아이콘 후보 ${cands.join(", ")}`);
+    } catch (e) { console.log(`앱 아이콘: aapt 실패 ${e.message.slice(0, 120)}`); }
+  }
+  const files = execFileSync("unzip", ["-Z1", apk], { maxBuffer: 1 << 26 }).toString().split("\n");
+  // 1) aapt가 알려 준 png  2) 이름에 ic_launcher/icon이 들어간 png 중 가장 큰 해상도
+  const dpi = f => ["xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi"].findIndex(d => f.includes(d) + 0) ;
+  let pick = cands.filter(f => f.endsWith(".png")).pop();
+  if (!pick) {
+    const pngs = files.filter(f => /^res\/(mipmap|drawable)[^/]*\/[^/]*(launcher|icon)[^/]*\.(png|webp)$/i.test(f) && !/foreground|background|round/i.test(f));
+    pngs.sort((a, b) => { const r = x => { const i = ["xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi"].findIndex(d => x.includes(d)); return i < 0 ? 9 : i; }; return r(a) - r(b); });
+    pick = pngs[0];
+    if (!pick) console.log("앱 아이콘: 파일 목록 일부", files.filter(f => /mipmap|launcher|icon/i.test(f)).slice(0, 30).join(" "));
+  }
+  if (!pick) throw new Error("APK에서 아이콘을 찾지 못했습니다");
+  const data = execFileSync("unzip", ["-p", apk, pick], { maxBuffer: 1 << 26 });
+  return { data, pick };
+}
+async function updateAppIcons() {
+  const c = config.appIcons; if (!c) return;
+  await mkdir(ICON_DIR, { recursive: true });
+  for (const a of c.play || []) {
+    const out = join(ICON_DIR, `${a.key}.png`);
+    if (await exists(out)) continue;
+    try {
+      const html = await get(`https://play.google.com/store/apps/details?id=${a.id}&hl=ko`);
+      const m = html.match(/<meta property="og:image" content="([^"]+)"/) || html.match(/itemprop="image" content="([^"]+)"/) || html.match(/"(https:\/\/play-lh\.googleusercontent\.com\/[^"=]+)/);
+      if (!m) throw new Error("아이콘 주소를 찾지 못했습니다");
+      const url = m[1].replace(/=[^/]*$/, "") + "=s192";
+      const { buf } = await saveBin(url, out);
+      console.log(`앱 아이콘: ${a.key} (플레이 스토어) ${buf.length}B`);
+    } catch (e) { warn(`앱 아이콘을 받지 못했습니다 (${a.key}): ${e.message}`); }
+  }
+  for (const a of c.apk || []) {
+    const out = join(ICON_DIR, `${a.key}.png`);
+    if (await exists(out)) continue;
+    const tmp = join(ROOT, `.tmp-${a.key}.apk`);
+    try {
+      let { buf, type } = await saveBin(`https://drive.usercontent.google.com/download?id=${a.drive}&export=download&confirm=t`, tmp);
+      if (/text\/html/.test(type)) { // 큰 파일 확인 화면이면 그 안의 진짜 주소로 다시
+        const h = buf.toString();
+        const form = h.match(/action="([^"]+)"/), inputs = [...h.matchAll(/name="([^"]+)" value="([^"]*)"/g)];
+        if (!form) throw new Error("구글 드라이브가 파일 대신 안내 화면을 줬습니다 (공유 설정 확인 필요)");
+        ({ buf, type } = await saveBin(`${decode(form[1])}?${inputs.map(m => `${m[1]}=${encodeURIComponent(decode(m[2]))}`).join("&")}`, tmp));
+      }
+      console.log(`앱 아이콘: ${a.key} APK ${buf.length}B (${type})`);
+      if (buf.subarray(0, 2).toString() !== "PK") throw new Error("받은 파일이 APK가 아닙니다");
+      const { data, pick } = apkIcon(tmp, out);
+      await writeFile(out, data);
+      console.log(`앱 아이콘: ${a.key} ← ${pick} ${data.length}B`);
+    } catch (e) { warn(`앱 아이콘을 받지 못했습니다 (${a.key}): ${e.message}`); }
+    finally { await rm(tmp, { force: true }); }
+  }
+}
+
 await updateSermons();
 await updateYdSermons();
 await updatePraise();
@@ -564,3 +639,4 @@ await updateSeminar();
 await updateLectures();
 await updateChurchEvents();
 await updateBulletin();
+await updateAppIcons();

@@ -169,5 +169,51 @@
   "bulletin": {
     "url": "https://church.jbch.org/age/board/list.php?auth_ok=1&flag=1&chId=58&use_kind=1&boardId=13096&page=1&menu_num=4&smenu_num=3&abtype=2&gCode=11157",
     "rss": "https://rss.jbch.org/boardb/1_58_13096.xml"
+  },
+  "appIcons": {
+    "play": [
+      {
+        "key": "saints",
+        "id": "org.jbch.saints_phone"
+      },
+      {
+        "key": "duty",
+        "id": "org.jbch.www.address_duty"
+      },
+      {
+        "key": "lifeword",
+        "id": "org.jbch.lifeworldmission"
+      },
+      {
+        "key": "jbchmap",
+        "id": "org.jbch.jbchmap"
+      },
+      {
+        "key": "recite",
+        "id": "com.hkkim.biblerecitationnotebook"
+      },
+      {
+        "key": "shittim",
+        "id": "org.jbch.shittimtree"
+      },
+      {
+        "key": "tov",
+        "id": "org.jbch.tovbible_for_android"
+      },
+      {
+        "key": "praynote",
+        "id": "org.jbch.praynote"
+      }
+    ],
+    "apk": [
+      {
+        "key": "tongil",
+        "drive": "1YBHyN3uyRA47STfMiFG1iRvckE0rqi8-"
+      },
+      {
+        "key": "eunhye",
+        "drive": "1p-gO-U7O0Br1pc3NQfy9oAeBMD8IeAyg"
+      }
+    ]
   }
 }
