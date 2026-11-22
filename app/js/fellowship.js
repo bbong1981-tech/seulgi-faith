@@ -90,19 +90,21 @@ async function postGuestbook() {
 TITLES.apps = "앱"; SUBTITLES.apps = "교회 생활에 도움이 되는 앱을 받아요.";
 const PLAY = id => `https://play.google.com/store/apps/details?id=${id}`;
 const CHURCH_APPS = [
-  { name: "성도연락처", id: "org.jbch.saints_phone", icon: "phone", color: "sky" },
-  { name: "임원수첩", id: "org.jbch.www.address_duty", icon: "notebook", color: "butter" },
-  { name: "생명의말씀선교회", id: "org.jbch.lifeworldmission", icon: "book", color: "peach" },
-  { name: "생명선지도", id: "org.jbch.jbchmap", icon: "map", color: "mint" },
-  { name: "성경암송수첩", id: "com.hkkim.biblerecitationnotebook", icon: "bookmark", color: "sky" },
-  { name: "뿌리깊은 싯딤나무", id: "org.jbch.shittimtree", icon: "tree", color: "mint" },
-  { name: "토브성경", id: "org.jbch.tovbible_for_android", icon: "sprout", color: "butter" },
-  { name: "생명기도수첩", id: "org.jbch.praynote", icon: "hands", color: "peach" }
+  { name: "성도연락처", id: "org.jbch.saints_phone", key: "saints", icon: "phone", color: "sky" },
+  { name: "임원수첩", id: "org.jbch.www.address_duty", key: "duty", icon: "notebook", color: "butter" },
+  { name: "생명의말씀선교회", id: "org.jbch.lifeworldmission", key: "lifeword", icon: "book", color: "peach" },
+  { name: "생명선지도", id: "org.jbch.jbchmap", key: "jbchmap", icon: "map", color: "mint" },
+  { name: "성경암송수첩", id: "com.hkkim.biblerecitationnotebook", key: "recite", icon: "bookmark", color: "sky" },
+  { name: "뿌리깊은 싯딤나무", id: "org.jbch.shittimtree", key: "shittim", icon: "tree", color: "mint" },
+  { name: "토브성경", id: "org.jbch.tovbible_for_android", key: "tov", icon: "sprout", color: "butter" },
+  { name: "생명기도수첩", id: "org.jbch.praynote", key: "praynote", icon: "hands", color: "peach" }
 ];
+// 실제 앱 아이콘 (GitHub Actions가 플레이 스토어·APK에서 받아 icons/apps/에 저장). 못 불러오면 선 아이콘으로
+const appIcon = (key, icon) => `<span class="app-ic"><img src="icons/apps/${key}.png" alt="" loading="lazy" onerror="this.parentNode.classList.add('fallback');this.remove()">${ICON(icon, 24)}</span>`;
 // 플레이 스토어에 없는 찬송가 앱: 구글 드라이브의 설치 파일(APK)을 받아 직접 설치
 const APK_APPS = [
-  { name: "통일찬송가", url: "https://drive.google.com/file/d/1YBHyN3uyRA47STfMiFG1iRvckE0rqi8-/view", color: "peach" },
-  { name: "은혜찬송가", url: "https://drive.google.com/file/d/1p-gO-U7O0Br1pc3NQfy9oAeBMD8IeAyg/view", color: "mint" }
+  { name: "통일찬송가", key: "tongil", url: "https://drive.google.com/file/d/1YBHyN3uyRA47STfMiFG1iRvckE0rqi8-/view", color: "peach" },
+  { name: "은혜찬송가", key: "eunhye", url: "https://drive.google.com/file/d/1p-gO-U7O0Br1pc3NQfy9oAeBMD8IeAyg/view", color: "mint" }
 ];
 VIEWS.apps = function () {
   $("#topActions").innerHTML = "";
@@ -110,7 +112,7 @@ VIEWS.apps = function () {
     <div class="section-title" style="margin-top:0">찬송가 앱 <span class="small muted">· 직접 설치</span></div>
     <div class="app-list">${APK_APPS.map(a => `
       <a class="card ksm-card ${a.color}" href="${a.url}" target="_blank" rel="noopener">
-        <span class="t-ic">${ICON("music", 24)}</span>
+        ${appIcon(a.key, "music")}
         <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 드라이브에서 설치 파일 받기</span></span>
         <span class="btn sm primary">받기</span>
       </a>`).join("")}</div>
@@ -144,7 +146,7 @@ VIEWS.apps = function () {
     <div class="section-title">플레이 스토어 앱</div>
     <div class="app-list">${CHURCH_APPS.map(a => `
     <a class="card ksm-card ${a.color}" href="${PLAY(a.id)}" target="_blank" rel="noopener">
-      <span class="t-ic">${ICON(a.icon, 24)}</span>
+      ${appIcon(a.key, a.icon)}
       <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
       <span class="btn sm primary">받기</span>
     </a>`).join("")}</div>

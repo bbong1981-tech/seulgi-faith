@@ -538,3 +538,9 @@ body.has-selbar main { padding-bottom: 200px; }
 .apk-help p { margin: 6px 0 0; line-height: 1.7; }
 .apk-which { margin: 14px 4px 0; line-height: 1.6; }
 .apk-help + .apk-help { margin-top: 10px; }
+/* 앱 메뉴: 실제 앱 아이콘 */
+.app-ic { width: 50px; height: 50px; border-radius: 13px; overflow: hidden; flex-shrink: 0; background: #fff; box-shadow: var(--clay-sm), 0 0 0 1px rgba(0,0,0,.05); display: grid; place-items: center; }
+.app-ic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.app-ic .ic { display: none; }
+.app-ic.fallback { background: var(--accent); color: #fff; }
+.app-ic.fallback .ic { display: block; }
