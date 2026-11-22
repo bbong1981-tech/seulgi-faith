@@ -99,6 +99,16 @@ const CHURCH_APPS = [
   { name: "토브성경", id: "org.jbch.tovbible_for_android", key: "tov", icon: "sprout", color: "butter" },
   { name: "생명기도수첩", id: "org.jbch.praynote", key: "praynote", icon: "hands", color: "peach" }
 ];
+// 아이폰용 (앱 스토어) — 같은 개발자가 올린 아이폰 앱. 생명기도수첩·찬송가 앱은 아이폰용이 없음
+const IOS_APPS = [
+  { name: "성도연락처", key: "saints", icon: "phone", color: "sky", url: "https://apps.apple.com/kr/app/id1670262623" },
+  { name: "임원수첩", key: "duty", icon: "notebook", color: "butter", url: "https://apps.apple.com/kr/app/id1534696946" },
+  { name: "생명의말씀선교회", key: "lifeword", icon: "book", color: "peach", url: "https://apps.apple.com/kr/app/id993620050" },
+  { name: "생명선지도", key: "jbchmap", icon: "map", color: "mint", url: "https://apps.apple.com/kr/app/id6803345179" },
+  { name: "성경암송수첩", key: "recite", icon: "bookmark", color: "sky", url: "https://apps.apple.com/kr/app/id1529992404" },
+  { name: "뿌리깊은 싯딤나무", key: "shittim", icon: "tree", color: "mint", url: "https://apps.apple.com/kr/app/id552294904" },
+  { name: "토브성경", key: "tov", icon: "sprout", color: "butter", url: "https://apps.apple.com/kr/app/id6473773823" }
+];
 // 실제 앱 아이콘 (GitHub Actions가 플레이 스토어·APK에서 받아 icons/apps/에 저장). 못 불러오면 선 아이콘으로
 const appIcon = (key, icon) => `<span class="app-ic"><img src="icons/apps/${key}.png" alt="" loading="lazy" onerror="this.parentNode.classList.add('fallback');this.remove()">${ICON(icon, 24)}</span>`;
 // 플레이 스토어에 없는 찬송가 앱: 구글 드라이브의 설치 파일(APK)을 받아 직접 설치
@@ -143,14 +153,21 @@ VIEWS.apps = function () {
       <p class="small muted">· 안전을 위해 설치가 끝난 뒤 4번에서 켠 <b>이 출처 허용</b>은 다시 꺼 두세요.<br>· 휴대폰마다 버튼 이름이 조금 다를 수 있어요.</p>
     </details>
     <p class="small muted" style="margin:8px 4px 0">· 아이폰에는 설치할 수 없어요.</p>
-    <div class="section-title">플레이 스토어 앱</div>
+    <div class="section-title">플레이 스토어 앱 <span class="small muted">· 안드로이드</span></div>
     <div class="app-list">${CHURCH_APPS.map(a => `
     <a class="card ksm-card ${a.color}" href="${PLAY(a.id)}" target="_blank" rel="noopener">
       ${appIcon(a.key, a.icon)}
       <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">구글 플레이 스토어에서 받기</span></span>
       <span class="btn sm primary">받기</span>
     </a>`).join("")}</div>
-    <p class="small muted" style="text-align:center;margin-top:14px">안드로이드 휴대폰용 앱이에요. 아이폰에서는 앱 스토어에서 같은 이름으로 찾아보세요.</p>`;
+    <div class="section-title">앱 스토어 앱 <span class="small muted">· 아이폰</span></div>
+    <div class="app-list">${IOS_APPS.map(a => `
+      <a class="card ksm-card ${a.color}" href="${a.url}" target="_blank" rel="noopener">
+        ${appIcon(a.key, a.icon)}
+        <span class="invite-text"><b class="display">${esc(a.name)}</b><span class="small muted">앱 스토어에서 받기</span></span>
+        <span class="btn sm primary">받기</span>
+      </a>`).join("")}</div>
+    <p class="small muted" style="text-align:center;margin-top:14px">생명기도수첩과 찬송가 앱은 아이폰용이 없어요.</p>`;
 };
 
 if (["fellow", "apps"].includes(S.tab)) render();

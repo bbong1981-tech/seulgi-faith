@@ -630,21 +630,6 @@ async function updateAppIcons() {
   }
 }
 
-// 임시 점검: 아이폰 앱 찾기
-async function probeIosApps() {
-  if (!process.env.IOS_PROBE) return;
-  const names = ["기도수첩", "생명 기도수첩", "기도 수첩", "praynote", "pray note", "기도노트 생명"];
-  const ids = ["org.jbch.praynote", "org.jbch.www.praynote", "org.lifewordmission.praynote", "kr.co.cedartrees.praynote"];
-  for (const id of ids) {
-    try { const d = JSON.parse(await get(`https://itunes.apple.com/lookup?bundleId=${id}&country=kr`)); console.log(`IOSP id ${id}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.trackViewUrl}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP id ${id} 실패 ${e.message}`); }
-  }
-  for (const n of names) {
-    try { const d = JSON.parse(await get(`https://itunes.apple.com/search?term=${encodeURIComponent(n)}&country=kr&entity=software&limit=8`)); console.log(`IOSP name ${n}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.bundleId} | ${r.trackViewUrl.split("?")[0]}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP name ${n} 실패 ${e.message}`); }
-  }
-  for (const dev of ["hogil kim"]) {
-    try { const d = JSON.parse(await get(`https://itunes.apple.com/search?term=${encodeURIComponent(dev)}&country=kr&entity=software&attribute=softwareDeveloper&limit=50`)); console.log(`IOSP dev ${dev}:`, (d.results || []).map(r => `${r.trackName} | ${r.sellerName} | ${r.bundleId} | ${r.trackViewUrl.split("?")[0]}`).join(" ;; ") || "-"); } catch (e) { console.log(`IOSP dev ${dev} 실패 ${e.message}`); }
-  }
-}
 
 await updateSermons();
 await updateYdSermons();
@@ -656,4 +641,3 @@ await updateLectures();
 await updateChurchEvents();
 await updateBulletin();
 await updateAppIcons();
-await probeIosApps();
